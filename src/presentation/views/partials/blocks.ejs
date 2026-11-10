@@ -1,0 +1,84 @@
+<%#
+  Renderiza los bloques de una página. Los bloques "seccion" abren una sección nueva;
+  el resto se agrupa dentro de la sección actual. El HTML de texto/aviso/acordeón ya fue
+  sanitizado en el servidor (lista blanca) al guardarse y al leer; todo lo demás se imprime escapado.
+%>
+<%
+  const secciones = [];
+  let actual = null;
+  for (const b of pagina.bloques) {
+    if (b.tipo === 'seccion' || !actual) { actual = { cabecera: b.tipo === 'seccion' ? b : null, bloques: [] }; secciones.push(actual); }
+    if (b.tipo !== 'seccion') actual.bloques.push(b);
+  }
+  const fondos = { blanco: '', gris: ' section--alt', azul: ' section--blue' };
+  const cols = { 2: 'grid--2', 3: 'grid--3', 4: 'grid--4' };
+  const img = (id) => medios.get(id);
+  const externo = (url) => /^https?:\/\//i.test(url || '');
+%>
+<% secciones.forEach(function (s) { const c = s.cabecera || {}; %>
+    <section class="section<%= fondos[c.fondo] || '' %>"<% if (c.ancla) { %> id="<%= c.ancla %>"<% } %>>
+      <div class="container">
+        <% if (c.antetitulo) { %><span class="eyebrow"><%= c.antetitulo %></span><% } %>
+        <% if (c.titulo) { %><h2 class="title-line"><%= c.titulo %></h2><% } %>
+        <% s.bloques.forEach(function (b) { %>
+          <% if (b.tipo === 'texto') { %>
+            <div class="rich-text"><%- b.html %></div>
+          <% } else if (b.tipo === 'aviso') { %>
+            <div class="notice<%= b.estilo === 'informacion' ? ' notice--blue' : '' %>"><%- b.html %></div>
+          <% } else if (b.tipo === 'imagen' && img(b.medioId)) { const m = img(b.medioId); %>
+            <figure class="block-figure">
+              <img src="<%= mediaSrc(m, { preview: vistaPrevia }) %>" alt="<%= m.textoAlternativo %>" loading="lazy"<% if (m.ancho) { %> width="<%= m.ancho %>" height="<%= m.alto %>"<% } %>>
+              <% if (b.pie) { %><figcaption><%= b.pie %></figcaption><% } %>
+            </figure>
+          <% } else if (b.tipo === 'galeria') { %>
+            <div class="gallery">
+              <% b.medios.map(img).filter(Boolean).forEach(function (m) { %>
+              <a href="<%= mediaSrc(m, { preview: vistaPrevia }) %>" target="_blank" rel="noopener"><img src="<%= mediaSrc(m, { preview: vistaPrevia, thumb: true }) %>" alt="<%= m.textoAlternativo %>" loading="lazy"></a>
+              <% }) %>
+            </div>
+          <% } else if (b.tipo === 'audio' && img(b.medioId)) { const m = img(b.medioId); %>
+            <figure class="block-audio">
+              <% if (b.titulo) { %><figcaption><%= b.titulo %></figcaption><% } %>
+              <audio controls preload="none" src="<%= mediaSrc(m, { preview: vistaPrevia }) %>"><a href="<%= mediaSrc(m, { preview: vistaPrevia }) %>">Descargar audio</a></audio>
+            </figure>
+          <% } else if (b.tipo === 'tarjetas') { %>
+            <div class="grid <%= cols[b.columnas] %>">
+              <% b.items.forEach(function (it) { %>
+                <% if (b.estilo === 'servicio' && it.enlace) { %>
+                <a class="card service" href="<%= it.enlace %>"<% if (it.ancla) { %> id="<%= it.ancla %>"<% } %><% if (externo(it.enlace)) { %> target="_blank" rel="noopener"<% } %>><h3><%= it.titulo %></h3><% if (it.texto) { %><p><%= it.texto %></p><% } %></a>
+                <% } else { %>
+                <article class="card card__body"<% if (it.ancla) { %> id="<%= it.ancla %>"<% } %>>
+                  <% if (it.etiqueta) { %><span class="badge"><%= it.etiqueta %></span><% } %>
+                  <h3><%= it.titulo %></h3>
+                  <% if (it.texto) { %><p><%= it.texto %></p><% } %>
+                  <% if (it.enlace) { %><a class="card__link" href="<%= it.enlace %>"<% if (externo(it.enlace)) { %> target="_blank" rel="noopener"<% } %>><%= it.textoEnlace || 'Ver más' %></a><% } %>
+                </article>
+                <% } %>
+              <% }) %>
+            </div>
+          <% } else if (b.tipo === 'acordeon') { %>
+            <div class="accordion block-accordion"<% if (b.ancla) { %> id="<%= b.ancla %>"<% } %>>
+              <% if (b.titulo) { %><h2 class="title-line"><%= b.titulo %></h2><% } %>
+              <% if (b.intro) { %><div class="notice"><%- b.intro %></div><% } %>
+              <% b.items.forEach(function (it) { %>
+              <details<% if (it.abierto) { %> open<% } %><% if (it.ancla) { %> id="<%= it.ancla %>"<% } %>><summary><%= it.titulo %></summary><div class="acc-body"><%- it.html %></div></details>
+              <% }) %>
+            </div>
+          <% } else if (b.tipo === 'tabla') { %>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><% b.encabezados.forEach(function (h) { %><th scope="col"><%= h %></th><% }) %></tr></thead>
+                <tbody><% b.filas.forEach(function (f) { %><tr><% f.forEach(function (celda) { %><td><%= celda %></td><% }) %></tr><% }) %></tbody>
+              </table>
+            </div>
+          <% } else if (b.tipo === 'boton') { %>
+            <p class="block-button"><a class="btn <%= b.estilo === 'primario' ? 'btn--primary' : 'btn--outline-blue' %>" href="<%= b.enlace %>"<% if (externo(b.enlace)) { %> target="_blank" rel="noopener"<% } %>><%= b.texto %></a></p>
+          <% } else if (b.tipo === 'directorioInstituciones') { %>
+            <%- include('instituciones', { instituciones, q }) %>
+          <% } else if (b.tipo === 'datosContacto') { %>
+            <%- include('contacto', { mostrarMapa: b.mostrarMapa }) %>
+          <% } %>
+        <% }) %>
+      </div>
+    </section>
+<% }) %>

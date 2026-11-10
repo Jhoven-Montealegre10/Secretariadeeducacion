@@ -1,0 +1,19 @@
+<%- include('_head') %>
+<body class="admin admin-auth">
+  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+  <div class="govco-bar"><div class="container"><a class="govco-logo" href="https://www.gov.co/" target="_blank" rel="noopener"><span class="govco-mark" aria-hidden="true">CO</span> GOV.CO</a></div></div>
+  <main id="contenido" class="auth-main">
+    <div class="auth-card" data-auth-view="<%= vista %>">
+      <div class="auth-brand">
+        <span class="brand__escudo" aria-hidden="true">SEM</span>
+        <div><small><%= site.entidad %></small><strong>Panel de administración</strong></div>
+      </div>
+      <div id="auth-root" aria-live="polite">
+        <noscript><div class="notice notice--error">El panel requiere JavaScript habilitado.</div></noscript>
+      </div>
+      <p class="muted auth-foot">Acceso exclusivo para funcionarios autorizados. Toda actividad queda registrada.</p>
+    </div>
+  </main>
+  <script type="module" src="/assets/admin/auth.js"></script>
+</body>
+</html>

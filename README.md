@@ -1,98 +1,63 @@
 # Portal web – Secretaría de Educación Municipal de Ibagué
 
-Nueva versión del sitio de la Secretaría de Educación de Ibagué (reemplazo de http://www.semibague.gov.co/).
+Portal institucional con identidad **GOV.CO**, **panel de administración propio** (sin WordPress), **API REST
+documentada con OpenAPI/Swagger**, arquitectura por capas con MVC y controles de seguridad verificados con pruebas.
 
-- **Diseño GOV.CO**: barra superior y pie GOV.CO, azul `#3366CC` / `#004884`, tipografías Montserrat y Work Sans.
-- **Responsive**: celulares, tabletas y computadores.
-- **Accesible**: navegación por teclado, alto contraste, tamaño de letra ajustable (WCAG 2.1 AA / NTC 5854).
-- **Arquitectura MVC** con Node.js + Express, vistas EJS y base de datos SQLite.
-- **Seguro por diseño**: ver la sección [Seguridad](#seguridad).
+## Qué incluye
 
-## Arquitectura (Modelo – Vista – Controlador)
+| Módulo | Funciones |
+|---|---|
+| **Sitio público** | Inicio con noticias y slider, páginas institucionales editables, noticias, normatividad, PQRSD, buscador, transparencia. Responsive y accesible. |
+| **Acceso al panel** | Usuario y contraseña (Argon2id), **doble autenticación TOTP obligatoria**, códigos de recuperación, recuperación por correo de un solo uso, cierre de sesión. |
+| **Usuarios y roles** | Alta por invitación, edición, desactivación, eliminación, restablecimiento de MFA; roles con permisos por módulo y acción. |
+| **Multimedia** | Imágenes y audios con búsqueda, filtros, previsualización, texto alternativo, nombre visible, reemplazo, aviso de uso y selector reutilizable. |
+| **Páginas** | Editor por bloques (sin escribir código), slug único, borrador/publicada, vista previa protegida. |
+| **Noticias** | Título, resumen, contenido enriquecido, imagen principal, galería, fecha, slug y estado; publicación automática en el inicio. |
+| **Sliders** | Por ubicación (Inicio, La Secretaría, Contacto u otra página), diapositivas ordenables, activables y con enlace. |
+| **Estadísticas** | Visitas, visitantes únicos estimados, páginas, fuentes, dispositivos y país, con filtros por fechas, sin cookies ni IP. |
+| **Auditoría** | Bitácora de solo inserción con verificación de integridad. |
+| **API REST** | `/api/v1` pública y privada, 48 operaciones, Swagger en `/api/docs` (pública) y `/admin/api-docs` (completa). |
 
-```
-server.js              Arranque del servidor HTTP
-app.js                 Ensambla la app: middleware de seguridad, sesiones, rutas
-config/
-  index.js             Configuración y secretos (leídos de .env, nunca del código)
-  site.js              Datos institucionales públicos (dirección, teléfonos, horarios, enlaces)
-src/
-  models/              MODELO: acceso a datos. Solo consultas preparadas (?).
-    db.js              Conexión y esquema de la base de datos
-    Noticia.js  Documento.js  Institucion.js  Pqrsd.js  Usuario.js  Auditoria.js
-  views/               VISTA: plantillas EJS (escapan toda salida)
-    partials/          Encabezado, pie, tarjetas reutilizables
-    pages/             Páginas públicas
-    admin/             Panel de administración
-    errors/            Páginas de error
-  controllers/         CONTROLADOR: reciben la petición, validan, llaman al modelo y eligen la vista
-    admin/             Controladores del panel
-  routes/              Mapa URL -> middleware -> controlador (public.js, admin.js)
-  middleware/          Seguridad: cabeceras/CSP, CSRF, autenticación, límites, subida de archivos, errores
-  services/            Cifrado, validación, sesiones, utilidades de vista
-public/assets/         CSS, JavaScript del navegador e imágenes (lo único público)
-scripts/               generate-keys, create-admin, seed
-tests/                 Pruebas automáticas de seguridad y funcionamiento
-storage/               Base de datos y PDF subidos (fuera de Git y fuera de /public)
-```
+## Documentación
 
-Flujo de una petición: **Ruta** → middleware (límite, CSRF, sesión, rol) → **Controlador** (valida entrada) → **Modelo** (consulta parametrizada / cifrado) → **Vista** (HTML escapado).
+| Documento | Contenido |
+|---|---|
+| [`docs/01-DIAGNOSTICO-INICIAL.md`](docs/01-DIAGNOSTICO-INICIAL.md) | Revisión del proyecto existente y hallazgos iniciales |
+| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Capas, MVC, estructura de carpetas, convenciones |
+| [`docs/PERMISOS.md`](docs/PERMISOS.md) | Matriz de permisos y reglas de autorización |
+| [`docs/API.md`](docs/API.md) | Uso de la API, autenticación, paginación, errores, versionado, integraciones |
+| [`docs/openapi.json`](docs/openapi.json) | Especificación OpenAPI 3.1 completa (y `openapi-publica.json`) |
+| [`docs/ESTADISTICAS.md`](docs/ESTADISTICAS.md) | Cómo se recopilan las métricas, privacidad y limitaciones |
+| [`docs/SEGURIDAD-AUDITORIA.md`](docs/SEGURIDAD-AUDITORIA.md) | Informe de auditoría (ASVS / Top 10), hallazgos, correcciones y pendientes |
+| [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) | Configuración y despliegue seguro, copias de seguridad, lista de verificación |
 
-## Instalación
+## Inicio rápido (desarrollo)
 
 Requisitos: **Node.js 22.13 o superior**.
 
 ```bash
-npm ci                    # instala dependencias exactas (package-lock.json)
-npm run generate-keys     # genera SESSION_SECRET y DATA_ENCRYPTION_KEY
-cp .env.example .env      # pegue las claves generadas en .env
-npm run seed              # carga instituciones y noticias de ejemplo
-npm run create-admin      # crea el primer usuario administrador (no hay usuarios por defecto)
-npm start                 # http://localhost:3000   — panel en /admin
-npm test                  # ejecuta las 25 pruebas de seguridad
+npm ci
+npm run generate-keys      # copie los valores en .env (ver .env.example)
+npm run migrate            # crea o actualiza la base de datos
+npm run seed               # instituciones de referencia
+npm run create-admin       # primer administrador (no hay usuarios por defecto)
+npm run dev                # http://localhost:3000 — panel en /admin
 ```
 
-En producción, ejecute la app detrás de Nginx/Apache con **HTTPS** obligatorio (`TRUST_PROXY=1`), con un gestor de procesos (systemd o PM2), y haga copia de seguridad diaria de `storage/` y de la clave `DATA_ENCRYPTION_KEY` (guardada aparte).
+En el primer ingreso el sistema pide configurar la aplicación autenticadora (Google Authenticator, Microsoft
+Authenticator, FreeOTP…) y entrega 10 códigos de recuperación. Sin SMTP configurado, en desarrollo los correos de
+invitación y recuperación se guardan en `storage/correo-desarrollo/`.
 
-## Panel de administración (`/admin`)
+## Calidad y verificación
 
-| Rol | Puede |
-|---|---|
-| `admin` | Todo: noticias, documentos, ver y responder PQRSD, ver auditoría |
-| `editor` | Noticias y documentos. **No** ve datos personales de PQRSD |
+```bash
+npm run verify     # lint + tipos + pruebas + contrato OpenAPI + auditoría de dependencias
+npm test           # 71 pruebas de seguridad y flujos críticos
+npm run openapi:export   # regenera docs/openapi*.json desde el código
+```
 
-- **Noticias**: crear, editar, publicar/ocultar, eliminar.
-- **Documentos**: publicar circulares, resoluciones, decretos y acuerdos en PDF.
-- **PQRSD**: ver solicitudes, cambiar estado y responder. El ciudadano consulta la respuesta con su radicado y documento.
+## Pendientes antes de publicar
 
-## Seguridad
-
-| Riesgo | Medida |
-|---|---|
-| **Inyección SQL** | Todas las consultas son sentencias preparadas con parámetros (`?`); los comodines de `LIKE` se escapan. Los IDs de las URL se validan como números. |
-| **Datos sensibles expuestos** | Los datos personales de las PQRSD (nombre, documento, correo, teléfono, asunto, mensaje, respuesta) se guardan **cifrados con AES-256-GCM**. La búsqueda por documento usa un índice ciego HMAC. Las contraseñas se guardan con **scrypt** + sal. |
-| **Claves en el frontend** | No hay claves, tokens ni lógica sensible en el navegador. Los secretos viven solo en `.env` del servidor (excluido de Git). En producción el servidor **no arranca** sin ellos. |
-| **XSS** | Las vistas escapan toda salida (`<%= %>`). Política CSP estricta: solo scripts propios, sin scripts ni estilos en línea. |
-| **CSRF** | Token secreto por sesión en todos los formularios + cookies `SameSite=Strict`. |
-| **Robo de sesión** | Cookie `HttpOnly`, `Secure` (HTTPS), `__Host-`, sesión guardada en el servidor, regeneración del ID al iniciar sesión, expiración a las 2 horas. |
-| **Fuerza bruta** | Límite de intentos por IP y bloqueo de la cuenta 15 min tras 5 intentos fallidos. Respuesta idéntica si el usuario no existe. |
-| **Spam / abuso** | Límites por IP (PQRSD 5/hora, consultas 20/15 min, general 600/15 min) y campo trampa anti-robots. |
-| **Archivos maliciosos** | Solo PDF verificados por su firma real (`%PDF-`), máx. 10 MB, guardados fuera de `/public` con nombre aleatorio; se descargan por ID. |
-| **Clickjacking, sniffing** | `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, HSTS, `Referrer-Policy`, `Permissions-Policy`. |
-| **Fuga de información** | Errores genéricos sin trazas; sin `X-Powered-By`; páginas privadas con `Cache-Control: no-store`; panel con `noindex`. |
-| **Trazabilidad** | Bitácora de auditoría de inicios de sesión y de cada acción del panel, incluida cada vez que alguien abre una PQRSD. |
-| **Dependencias** | Solo 6 dependencias de producción; `npm audit` sin vulnerabilidades. |
-
-## Pendientes de contenido
-
-Marcados con `TODO` en el código:
-
-- [ ] Escudo oficial de la Alcaldía (`public/assets/img/`).
-- [ ] Misión y visión oficiales (`src/views/pages/secretaria.ejs`).
-- [ ] Organigrama y directorio de funcionarios.
-- [ ] URL oficiales de SAC, Humano en Línea y redes sociales (`config/site.js`).
-- [ ] Correo de notificaciones judiciales.
-- [ ] Noticias y documentos reales (se cargan desde el panel `/admin`).
-- [ ] Directorio completo de instituciones educativas (`scripts/seed.js`).
-- [ ] Documentos del menú de Transparencia.
-- [ ] Notificación por correo al ciudadano al radicar/responder (requiere servidor SMTP institucional).
+Ver `docs/SEGURIDAD-AUDITORIA.md` §6 y la lista de verificación de `docs/DESPLIEGUE.md` §8. Los principales:
+configurar SMTP y antimalware, ejecutar un escaneo DAST en preproducción, probar la restauración de copias, y
+cargar el contenido oficial (misión, visión, directorio, enlaces SAC y Humano) desde el panel.

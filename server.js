@@ -1,9 +1,9 @@
 'use strict';
-const config = require('./config');
+const config = require('./src/config');
 const app = require('./app');
 
-const server = app.listen(config.port, () => {
-  console.log(`Portal SEM Ibagué escuchando en http://localhost:${config.port} (${config.env})`);
+const server = app.listen(config.port, config.host, () => {
+  console.log(`Portal SEM Ibagué escuchando en http://${config.host}:${config.port} (${config.env})`);
 });
 
 // Tiempos máximos para mitigar conexiones lentas intencionales (slowloris).

@@ -1,0 +1,32 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: noticia.titulo, parent: ['Noticias', '/noticias'], intro: noticia.resumen }) %>
+    <section class="section">
+      <div class="container article">
+        <p class="card__date"><span class="badge"><%= noticia.categoria %></span> · <time datetime="<%= noticia.fechaPublicacion %>"><%= fecha(noticia.fechaPublicacion) %></time></p>
+        <% const principal = imagenes.get(noticia.imagenId); %>
+        <% if (principal) { %>
+        <figure class="block-figure"><img src="<%= mediaSrc(principal, { preview: vistaPrevia }) %>" alt="<%= principal.textoAlternativo %>"<% if (principal.ancho) { %> width="<%= principal.ancho %>" height="<%= principal.alto %>"<% } %>></figure>
+        <% } %>
+        <%# Contenido enriquecido sanitizado en el servidor con lista blanca (htmlSanitizer). %>
+        <div class="rich-text"><%- noticia.contenido %></div>
+        <% const fotos = noticia.fotos.map((id) => imagenes.get(id)).filter(Boolean); %>
+        <% if (fotos.length) { %>
+        <h2 class="h3">Galería</h2>
+        <div class="gallery">
+          <% fotos.forEach(function (m) { %><a href="<%= mediaSrc(m, { preview: vistaPrevia }) %>" target="_blank" rel="noopener"><img src="<%= mediaSrc(m, { preview: vistaPrevia, thumb: true }) %>" alt="<%= m.textoAlternativo %>" loading="lazy"></a><% }) %>
+        </div>
+        <% } %>
+        <p class="mt-40"><a class="btn btn--outline-blue" href="/noticias">← Volver a noticias</a></p>
+      </div>
+    </section>
+    <% if (otras.length) { %>
+    <section class="section section--alt">
+      <div class="container">
+        <h2 class="title-line">Otras noticias</h2>
+        <div class="grid grid--3">
+          <% otras.forEach(function (n) { %><%- include('../partials/noticia-card', { n, imagenes }) %><% }) %>
+        </div>
+      </div>
+    </section>
+    <% } %>
+<%- include('../partials/footer') %>
