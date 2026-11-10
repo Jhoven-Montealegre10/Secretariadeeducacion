@@ -13,6 +13,7 @@ import { types, type ClientConfig } from 'pg';
 import type { DataSourceOptions } from 'typeorm';
 import type { AppConfig } from '../../config/configuration';
 import { ENTITIES } from './entities';
+import { SafeQueryLogger } from './safe-logger';
 
 // DATE se entrega como texto AAAA-MM-DD (sin conversión a la zona horaria local del proceso).
 types.setTypeParser(1082, (v: string) => v);
@@ -75,6 +76,7 @@ export function dataSourceOptions(config: AppConfig, { forMigrations = false } =
     synchronize: false,
     migrationsRun: false,
     logging: ['error', 'warn', 'migration'],
+    logger: new SafeQueryLogger(config.isTest),
     maxQueryExecutionTime: db.slowQueryMs,
     applicationName: `semibague-${forMigrations ? 'migrador' : 'app'}-${config.instanceId}`,
     extra: {

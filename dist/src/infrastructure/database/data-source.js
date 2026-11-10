@@ -18,6 +18,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const pg_1 = require("pg");
 const entities_1 = require("./entities");
+const safe_logger_1 = require("./safe-logger");
 // DATE se entrega como texto AAAA-MM-DD (sin conversión a la zona horaria local del proceso).
 pg_1.types.setTypeParser(1082, (v) => v);
 // COUNT(*) y bigint pequeños como número (las cifras del portal no se acercan a 2^53).
@@ -76,6 +77,7 @@ function dataSourceOptions(config, { forMigrations = false } = {}) {
         synchronize: false,
         migrationsRun: false,
         logging: ['error', 'warn', 'migration'],
+        logger: new safe_logger_1.SafeQueryLogger(config.isTest),
         maxQueryExecutionTime: db.slowQueryMs,
         applicationName: `semibague-${forMigrations ? 'migrador' : 'app'}-${config.instanceId}`,
         extra: {
