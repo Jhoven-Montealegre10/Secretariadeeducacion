@@ -90,6 +90,7 @@ function loadConfig(env = process.env) {
         port,
         appUrl,
         trustProxy: num('TRUST_PROXY', 0),
+        autoMigrate: env.AUTO_MIGRATE ? env.AUTO_MIGRATE === 'true' : !isProd && !isTest,
         instanceId: env.INSTANCE_ID || node_crypto_1.default.randomBytes(4).toString('hex'),
         db,
         mediaDir: env.MEDIA_DIR || node_path_1.default.join(storageDir, 'media'),

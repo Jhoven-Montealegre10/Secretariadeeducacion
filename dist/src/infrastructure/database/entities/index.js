@@ -20,8 +20,24 @@ const content_entities_1 = require("./content.entities");
 __exportStar(require("./identity.entities"), exports);
 __exportStar(require("./content.entities"), exports);
 exports.ENTITIES = [
-    identity_entities_1.RolEntity, identity_entities_1.RolPermisoEntity, identity_entities_1.UsuarioEntity, identity_entities_1.CodigoRecuperacionEntity, identity_entities_1.TokenRecuperacionEntity, identity_entities_1.SesionEntity, identity_entities_1.AuditoriaEventoEntity,
-    content_entities_1.MedioEntity, content_entities_1.MedioUsoEntity, content_entities_1.NoticiaEntity, content_entities_1.NoticiaFotoEntity, content_entities_1.PaginaEntity, content_entities_1.SliderEntity, content_entities_1.DiapositivaEntity, content_entities_1.DocumentoEntity,
-    content_entities_1.InstitucionEntity, content_entities_1.PqrsdEntity, content_entities_1.VisitaEntity, content_entities_1.SalEstadisticaEntity,
+    identity_entities_1.RolEntity,
+    identity_entities_1.RolPermisoEntity,
+    identity_entities_1.UsuarioEntity,
+    identity_entities_1.CodigoRecuperacionEntity,
+    identity_entities_1.TokenRecuperacionEntity,
+    identity_entities_1.SesionEntity,
+    identity_entities_1.AuditoriaEventoEntity,
+    content_entities_1.MedioEntity,
+    content_entities_1.MedioUsoEntity,
+    content_entities_1.NoticiaEntity,
+    content_entities_1.NoticiaFotoEntity,
+    content_entities_1.PaginaEntity,
+    content_entities_1.SliderEntity,
+    content_entities_1.DiapositivaEntity,
+    content_entities_1.DocumentoEntity,
+    content_entities_1.InstitucionEntity,
+    content_entities_1.PqrsdEntity,
+    content_entities_1.VisitaEntity,
+    content_entities_1.SalEstadisticaEntity,
 ];
 //# sourceMappingURL=index.js.map

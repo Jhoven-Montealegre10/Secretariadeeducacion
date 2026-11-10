@@ -42,7 +42,9 @@ let HtmlSanitizer = class HtmlSanitizer {
         return (0, sanitize_html_1.default)(String(html ?? ''), OPTIONS).trim();
     }
     stripTags(html) {
-        return (0, sanitize_html_1.default)(String(html ?? ''), { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, ' ').trim();
+        return (0, sanitize_html_1.default)(String(html ?? ''), { allowedTags: [], allowedAttributes: {} })
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 };
 exports.HtmlSanitizer = HtmlSanitizer;

@@ -30,7 +30,13 @@ let CryptoService = class CryptoService {
     keys;
     constructor(config) {
         const derive = (label) => Buffer.from(node_crypto_1.default.hkdfSync('sha256', config.dataKey, Buffer.alloc(0), label, 32));
-        this.keys = { encryption: derive('sem-encryption'), blindIndex: derive('sem-blind-index'), token: derive('sem-token'), audit: derive('sem-audit-chain'), stats: derive('sem-stats') };
+        this.keys = {
+            encryption: derive('sem-encryption'),
+            blindIndex: derive('sem-blind-index'),
+            token: derive('sem-token'),
+            audit: derive('sem-audit-chain'),
+            stats: derive('sem-stats'),
+        };
     }
     encrypt(plain) {
         if (plain === null || plain === undefined || plain === '')
@@ -60,7 +66,17 @@ let CryptoService = class CryptoService {
         return this.hmac(this.keys.token, String(value));
     }
     auditChainHash(previous, row) {
-        const canonical = JSON.stringify([row.usuarioId ?? null, row.usuarioEmail ?? null, row.accion, row.recurso ?? null, row.recursoId ?? null, row.resultado, row.detalle ?? null, row.ipHash ?? null, row.creadoEn]);
+        const canonical = JSON.stringify([
+            row.usuarioId ?? null,
+            row.usuarioEmail ?? null,
+            row.accion,
+            row.recurso ?? null,
+            row.recursoId ?? null,
+            row.resultado,
+            row.detalle ?? null,
+            row.ipHash ?? null,
+            row.creadoEn,
+        ]);
         return this.hmac(this.keys.audit, `${previous}|${canonical}`);
     }
     statsHash(salt, value) {

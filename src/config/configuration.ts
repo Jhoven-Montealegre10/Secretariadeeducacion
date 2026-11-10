@@ -37,6 +37,8 @@ export interface AppConfig {
   port: number;
   appUrl: string;
   trustProxy: number;
+  /** Aplicar migraciones pendientes al arrancar (con la cuenta de migraciones). Desactivado en producción. */
+  autoMigrate: boolean;
   instanceId: string;
   db: DatabaseConfig;
   mediaDir: string;
@@ -128,6 +130,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port,
     appUrl,
     trustProxy: num('TRUST_PROXY', 0),
+    autoMigrate: env.AUTO_MIGRATE ? env.AUTO_MIGRATE === 'true' : !isProd && !isTest,
     instanceId: env.INSTANCE_ID || crypto.randomBytes(4).toString('hex'),
     db,
     mediaDir: env.MEDIA_DIR || path.join(storageDir, 'media'),
