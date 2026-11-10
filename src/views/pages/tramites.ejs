@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+    <section class="page-hero">
+      <div class="container">
+        <ol class="breadcrumb"><li><a href="/">Inicio</a></li><li>Trámites y servicios</li></ol>
+        <h1>Trámites y servicios</h1>
+        <p>Consulte requisitos, canales y tiempos de respuesta. Muchos trámites se pueden hacer en línea.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="notice notice--blue">Los trámites de la Secretaría también están inscritos en el Sistema Único de Información de Trámites (SUIT) y se pueden consultar en <a href="https://www.gov.co/" target="_blank" rel="noopener">GOV.CO</a>.</div>
+
+        <div class="accordion">
+          <h2 class="title-line" id="matricula">Matrícula y cupos</h2>
+          <details open>
+            <summary>Solicitud de cupo para estudiantes nuevos</summary>
+            <div class="acc-body">
+              <p>Para niñas, niños y jóvenes que desean ingresar por primera vez al sistema educativo oficial de Ibagué.</p>
+              <ul>
+                <li>Documento de identidad del estudiante (registro civil o tarjeta de identidad).</li>
+                <li>Documento de identidad del acudiente.</li>
+                <li>Certificado de estudios del último grado cursado (si aplica).</li>
+                <li>Carné de vacunas para preescolar.</li>
+              </ul>
+              <p><strong>Canal:</strong> directamente en la institución educativa o mediante solicitud en el SAC, según el cronograma de matrícula vigente.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Traslado de estudiantes entre instituciones oficiales</summary>
+            <div class="acc-body"><p>Se solicita ante la institución de destino o por el SAC, sujeto a disponibilidad de cupos.</p></div>
+          </details>
+          <details>
+            <summary>Renovación de matrícula</summary>
+            <div class="acc-body"><p>Los estudiantes antiguos renuevan su matrícula directamente en la institución educativa en las fechas fijadas por la Secretaría.</p></div>
+          </details>
+
+          <h2 class="mt-40 title-line" id="docentes">Docentes y directivos docentes</h2>
+          <details>
+            <summary>Certificado laboral y de tiempo de servicio</summary>
+            <div class="acc-body">
+              <p>Los docentes activos pueden descargar o solicitar el certificado laboral desde <strong>Humano en Línea</strong>. Para certificados con funciones o de personal retirado, la solicitud se radica por el SAC.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Certificado de salarios (formato CETIL / bonos pensionales)</summary>
+            <div class="acc-body"><p>Se solicita a través del SAC adjuntando copia del documento de identidad y el periodo a certificar.</p></div>
+          </details>
+          <details>
+            <summary>Novedades de nómina, permisos, licencias y traslados</summary>
+            <div class="acc-body"><p>Se radican por el SAC con los soportes requeridos según el tipo de novedad.</p></div>
+          </details>
+          <details>
+            <summary>Ascenso o reubicación en el escalafón docente</summary>
+            <div class="acc-body"><p>Aplica para docentes de los Decretos 2277 de 1979 y 1278 de 2002, según la normativa y las convocatorias vigentes.</p></div>
+          </details>
+
+          <h2 class="mt-40 title-line" id="prestaciones">Fondo de Prestaciones Económicas</h2>
+          <div class="notice"><strong>Horario de atención:</strong> lunes, miércoles y jueves de 7:30 a.m. a 3:30 p.m. Martes y viernes no hay atención al público.</div>
+          <details>
+            <summary>Cesantías parciales y definitivas</summary>
+            <div class="acc-body"><p>Solicitudes de docentes afiliados al FOMAG para compra, construcción o mejora de vivienda, estudios, o retiro definitivo.</p></div>
+          </details>
+          <details>
+            <summary>Pensiones y reconocimientos prestacionales</summary>
+            <div class="acc-body"><p>Pensión de jubilación, invalidez, sobrevivientes, auxilios e indemnizaciones del magisterio.</p></div>
+          </details>
+
+          <h2 class="mt-40 title-line" id="establecimientos">Establecimientos educativos</h2>
+          <details>
+            <summary>Licencia de funcionamiento para establecimientos privados</summary>
+            <div class="acc-body"><p>Requisito para que un establecimiento educativo privado preste el servicio de educación formal en Ibagué.</p></div>
+          </details>
+          <details>
+            <summary>Reconocimiento oficial y aprobación de estudios</summary>
+            <div class="acc-body"><p>Trámite para ampliación de niveles, cambio de sede, de propietario o de nombre de un establecimiento.</p></div>
+          </details>
+          <details>
+            <summary>Instituciones de educación para el trabajo y el desarrollo humano</summary>
+            <div class="acc-body"><p>Licencia de funcionamiento y registro de programas.</p></div>
+          </details>
+
+          <h2 class="mt-40 title-line" id="certificados">Certificados y legalizaciones</h2>
+          <details>
+            <summary>Legalización de documentos académicos para el exterior</summary>
+            <div class="acc-body"><p>Autenticación de firmas de rectores y directores en certificados y diplomas para trámites de apostilla.</p></div>
+          </details>
+          <details>
+            <summary>Certificados de estudio de instituciones cerradas</summary>
+            <div class="acc-body"><p>La Secretaría custodia los archivos de establecimientos clausurados y expide los certificados correspondientes.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt" id="sistemas">
+      <div class="container">
+        <span class="eyebrow">Plataformas</span>
+        <h2 class="title-line">Sistemas de información</h2>
+                <div class="grid grid--3">
+          <div class="card card__body"><h3>SAC – Atención al Ciudadano</h3><p>Radique solicitudes y consulte el estado de su trámite.</p><% if (site.enlaces.sac) { %><a class="card__link" href="<%= site.enlaces.sac %>" target="_blank" rel="noopener">Ingresar al SAC</a><% } else { %><a class="card__link" href="/atencion#pqrsd">Radicar en línea</a><% } %></div>
+          <div class="card card__body"><h3>Humano en Línea</h3><p>Certificados laborales, desprendibles de nómina y datos personales.</p><% if (site.enlaces.humano) { %><a class="card__link" href="<%= site.enlaces.humano %>" target="_blank" rel="noopener">Ingresar a Humano</a><% } else { %><span class="muted">Enlace próximamente</span><% } %></div>
+          <div class="card card__body"><h3>SIMAT</h3><p>Sistema Integrado de Matrícula (uso de instituciones educativas).</p><a class="card__link" href="https://www.sistemamatriculas.gov.co/" target="_blank" rel="noopener">Ingresar a SIMAT</a></div>
+          <div class="card card__body"><h3>Sistema Maestro</h3><p>Vacantes definitivas y temporales para docentes.</p><a class="card__link" href="https://sistemamaestro.mineducacion.gov.co/" target="_blank" rel="noopener">Ingresar</a></div>
+          <div class="card card__body"><h3>FOMAG</h3><p>Servicios del Fondo Nacional de Prestaciones Sociales del Magisterio.</p><a class="card__link" href="https://www.fomag.gov.co/" target="_blank" rel="noopener">Ingresar</a></div>
+          <div class="card card__body"><h3>SECOP</h3><p>Consulta de procesos de contratación pública.</p><a class="card__link" href="https://www.colombiacompra.gov.co/" target="_blank" rel="noopener">Ingresar</a></div>
+        </div>
+      </div>
+    </section>
+<%- include('../partials/footer') %>

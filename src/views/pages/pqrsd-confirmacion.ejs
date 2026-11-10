@@ -1,0 +1,14 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: 'Solicitud radicada', parent: ['Atención al ciudadano', '/atencion'] }) %>
+    <section class="section">
+      <div class="container narrow">
+        <div class="card card__body text-center" role="status">
+          <span class="badge badge--green m-auto">Radicada con éxito</span>
+          <p>Su número de radicado es:</p>
+          <p class="radicado"><%= radicado %></p>
+          <p>Guárdelo: lo necesitará junto con su número de documento para consultar el estado de su solicitud. Esta página no se volverá a mostrar.</p>
+          <p class="m-0"><a class="btn btn--primary" href="/atencion#consulta">Consultar mi solicitud</a> <a class="btn btn--outline-blue" href="/">Ir al inicio</a></p>
+        </div>
+      </div>
+    </section>
+<%- include('../partials/footer') %>

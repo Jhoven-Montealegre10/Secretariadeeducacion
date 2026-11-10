@@ -1,0 +1,13 @@
+<%- include('_header') %>
+      <div class="narrow-sm">
+        <h1>Ingreso de administradores</h1>
+        <p class="muted">Acceso exclusivo para funcionarios autorizados de la Secretaría de Educación.</p>
+        <% if (error) { %><div class="notice notice--error" role="alert"><%= error %></div><% } %>
+        <form class="form card card__body" method="post" action="/admin/login">
+          <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+          <div><label for="email">Correo institucional</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="username" value="<%= email %>"></div>
+          <div><label for="password">Contraseña</label><input id="password" name="password" type="password" required maxlength="200" autocomplete="current-password"></div>
+          <div><button class="btn btn--primary" type="submit">Ingresar</button></div>
+        </form>
+      </div>
+<%- include('_footer') %>

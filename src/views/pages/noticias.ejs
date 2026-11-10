@@ -1,0 +1,21 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: 'Noticias y comunicados', intro: 'Entérese de lo que pasa en la educación pública de Ibagué.' }) %>
+    <section class="section">
+      <div class="container">
+        <% if (items.length) { %>
+        <div class="grid grid--3">
+          <% items.forEach(function (n) { %><%- include('../partials/noticia-card', { n }) %><% }) %>
+        </div>
+        <% } else { %>
+        <p>Aún no hay noticias publicadas.</p>
+        <% } %>
+        <% if (pages > 1) { %>
+        <nav class="pagination" aria-label="Paginación de noticias">
+          <% if (page > 1) { %><a class="btn btn--outline-blue" href="/noticias?page=<%= page - 1 %>">← Anteriores</a><% } %>
+          <span>Página <%= page %> de <%= pages %></span>
+          <% if (page < pages) { %><a class="btn btn--outline-blue" href="/noticias?page=<%= page + 1 %>">Siguientes →</a><% } %>
+        </nav>
+        <% } %>
+      </div>
+    </section>
+<%- include('../partials/footer') %>
