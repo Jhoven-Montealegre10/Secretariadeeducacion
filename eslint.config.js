@@ -51,6 +51,8 @@ module.exports = tseslint.config(
     },
   },
   { files: ['test/**/*.ts', 'scripts/**/*.ts'], rules: { 'security/detect-child-process': 'off', 'security/detect-non-literal-regexp': 'off' } },
+  // node:test: describe/test devuelven promesas que el propio ejecutor espera.
+  { files: ['test/**/*.ts'], rules: { '@typescript-eslint/no-floating-promises': 'off', '@typescript-eslint/no-non-null-assertion': 'off' } },
   { files: ['**/*.js'], languageOptions: { ecmaVersion: 2023, sourceType: 'commonjs', globals: { ...globals.node } } },
   { files: ['public/assets/**/*.js'], languageOptions: { sourceType: 'module', globals: { ...globals.browser } } },
   { files: ['public/assets/js/**/*.js'], languageOptions: { sourceType: 'script' } },

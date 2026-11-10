@@ -164,7 +164,7 @@ export async function createHarness(extraEnv: NodeJS.ProcessEnv = {}): Promise<H
     dbName,
     adminUrl: adminUrl(),
     get: <T>(type: new (...args: never[]) => T) => app.get(type),
-    agent: () => request.agent(app.getHttpServer()) as Agent,
+    agent: () => request.agent(app.getHttpServer()),
 
     async createUser({ email, nombre = 'Usuario de Prueba', rol = 'editor', password = PASSWORD, mfa = true }) {
       const role = await app.get(RoleRepository).findBySlug(rol);

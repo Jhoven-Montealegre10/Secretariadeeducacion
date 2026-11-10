@@ -29,7 +29,7 @@ before(async () => {
     stream.write = ((chunk: unknown, ...rest: unknown[]) => {
       logs.push(String(chunk));
       return (orig as (...a: unknown[]) => boolean)(chunk, ...rest);
-    }) as typeof stream.write;
+    });
   }
   h = await createHarness();
   admin = await h.createUser({ email: 'admin@example.gov.co', rol: 'administrador' });
