@@ -24,7 +24,7 @@ no se usa sincronización automática del esquema; las credenciales de migració
 | 1 | Poner el sitio anterior en **mantenimiento de escritura**: detener el servicio v3 (o bloquear `POST/PUT/PATCH/DELETE` en el proxy). El sitio público puede seguir en solo lectura desde v3. | `curl -X POST …/api/v1/auth/login` → 503/405 |
 | 2 | Respaldo verificado: `npm run backup:sqlite -- --sqlite /var/lib/semibague/semibague.sqlite --media … --uploads … --destino /respaldos` | Mensaje `✓` y `manifiesto.json` con `filasCoinciden: true` |
 | 3 | Copiar el respaldo al servidor nuevo (cifrado) y comprobar el SHA-256 del manifiesto. | `sha256sum` coincide |
-| 4 | Simulacro final: `npm run migrate:from-sqlite -- --sqlite <respaldo>/semibague.sqlite --media <respaldo>/media --uploads <respaldo>/uploads --simulacro` | `Resultado: OK` |
+| 4 | Simulacro final: `npm run migrate:from-sqlite -- --sqlite <respaldo>/semibague.sqlite --media <respaldo>/media --uploads <respaldo>/uploads --simulacro` | `Resultado: OK` (el simulacro copia los archivos al destino para verificarlos; son copias idénticas y se reutilizan en el paso 5) |
 | 5 | Migración: el mismo comando sin `--simulacro` y con `--informe /respaldos/informe-migracion.json` | `Resultado: OK`; informe guardado |
 | 6 | Arrancar v4 (`systemctl start semibague`); `GET /health/ready` | `{"estado":"ok"}` |
 | 7 | Verificación funcional (lista abajo) con un administrador real y un editor. | Todo ✓ |

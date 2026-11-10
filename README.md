@@ -1,63 +1,69 @@
 # Portal web – Secretaría de Educación Municipal de Ibagué
 
-Portal institucional con identidad **GOV.CO**, **panel de administración propio** (sin WordPress), **API REST
-documentada con OpenAPI/Swagger**, arquitectura por capas con MVC y controles de seguridad verificados con pruebas.
+Portal institucional con identidad **GOV.CO**, **panel de administración propio**, **API REST versionada con
+OpenAPI/Swagger**, arquitectura por capas (MVC) y controles de seguridad verificados con pruebas.
+
+**Versión 4:** TypeScript + **NestJS 12** sobre **Node.js 24 LTS**, **PostgreSQL 16** con **TypeORM** (migraciones
+versionadas). Diseño, contenidos y funciones de la versión anterior se conservan; los datos de SQLite se migran con una
+herramienta verificada (`docs/migracion/`).
 
 ## Qué incluye
 
 | Módulo | Funciones |
 |---|---|
 | **Sitio público** | Inicio con noticias y slider, páginas institucionales editables, noticias, normatividad, PQRSD, buscador, transparencia. Responsive y accesible. |
-| **Acceso al panel** | Usuario y contraseña (Argon2id), **doble autenticación TOTP obligatoria**, códigos de recuperación, recuperación por correo de un solo uso, cierre de sesión. |
-| **Usuarios y roles** | Alta por invitación, edición, desactivación, eliminación, restablecimiento de MFA; roles con permisos por módulo y acción. |
-| **Multimedia** | Imágenes y audios con búsqueda, filtros, previsualización, texto alternativo, nombre visible, reemplazo, aviso de uso y selector reutilizable. |
-| **Páginas** | Editor por bloques (sin escribir código), slug único, borrador/publicada, vista previa protegida. |
-| **Noticias** | Título, resumen, contenido enriquecido, imagen principal, galería, fecha, slug y estado; publicación automática en el inicio. |
-| **Sliders** | Por ubicación (Inicio, La Secretaría, Contacto u otra página), diapositivas ordenables, activables y con enlace. |
-| **Estadísticas** | Visitas, visitantes únicos estimados, páginas, fuentes, dispositivos y país, con filtros por fechas, sin cookies ni IP. |
-| **Auditoría** | Bitácora de solo inserción con verificación de integridad. |
-| **API REST** | `/api/v1` pública y privada, 48 operaciones, Swagger en `/api/docs` (pública) y `/admin/api-docs` (completa). |
+| **Acceso al panel** | Argon2id, **MFA TOTP obligatorio**, códigos de recuperación, recuperación por correo de un solo uso, sesiones en PostgreSQL revocables. |
+| **Usuarios y roles** | Invitación, edición, desactivación, eliminación, restablecimiento de MFA; permisos por módulo y acción. |
+| **Multimedia** | Imágenes y audios (validación por contenido, re-codificación, antimalware), búsqueda, reemplazo, aviso de uso. |
+| **Páginas / Noticias / Sliders** | Editor por bloques, borradores y vista previa protegida, publicación automática en el inicio, sliders por ubicación. |
+| **Ediciones simultáneas** | Bloqueo optimista: si otra persona guardó antes, `409 EDIT_CONFLICT` y aviso en el panel. |
+| **Estadísticas** | Visitas sin cookies ni IP, por lotes en segundo plano. |
+| **Auditoría** | Bitácora de solo inserción (triggers + permisos de PostgreSQL) con cadena HMAC verificable. |
+| **API REST** | `/api/v1` pública y privada, 70 operaciones; Swagger en `/api/docs` (pública) y `/admin/api-docs` (completa). |
+| **Operación** | `/health/live`, `/health/ready`, métricas en `/api/v1/sistema/metricas`, caché pública con invalidación. |
+
+## Inicio rápido (desarrollo)
+
+Requisitos: **Node.js 24 LTS** (o 26) y **PostgreSQL 16**.
+
+```bash
+npm ci
+npm run generate-keys                       # secretos → .env (ver .env.example)
+psql -v app_password=… -v migrator_password=… -v db_name=semibague_dev \
+     -f scripts/postgres/01-crear-roles-y-base.sql   # roles de mínimo privilegio (como DBA)
+npm run migrate                             # esquema (cuenta de migraciones)
+npm run seed                                # instituciones de referencia
+npm run build && npm run create-admin       # primer administrador
+npm run dev                                 # http://localhost:3000 — panel en /admin
+```
+
+## Calidad y verificación
+
+```bash
+npm run verify            # lint + formato + tipos + build + pruebas + contrato OpenAPI + npm audit
+npm run test:unit         # 55 pruebas de dominio, infraestructura y servicios (sin BD)
+npm run test:integration  # 104 pruebas contra PostgreSQL real (requiere TEST_PG_ADMIN_URL de un servidor de PRUEBAS)
+npm run test:e2e          # navegador real (Playwright): panel, sitio, permisos, escritorio/tableta/móvil
+npm run test:load         # carga con autocannon en entorno autorizado
+```
+
+Resultados de la última verificación: [`docs/QA-INFORME.md`](docs/QA-INFORME.md).
 
 ## Documentación
 
 | Documento | Contenido |
 |---|---|
-| [`docs/01-DIAGNOSTICO-INICIAL.md`](docs/01-DIAGNOSTICO-INICIAL.md) | Revisión del proyecto existente y hallazgos iniciales |
-| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) | Capas, MVC, estructura de carpetas, convenciones |
-| [`docs/PERMISOS.md`](docs/PERMISOS.md) | Matriz de permisos y reglas de autorización |
-| [`docs/API.md`](docs/API.md) | Uso de la API, autenticación, paginación, errores, versionado, integraciones |
-| [`docs/openapi.json`](docs/openapi.json) | Especificación OpenAPI 3.1 completa (y `openapi-publica.json`) |
-| [`docs/ESTADISTICAS.md`](docs/ESTADISTICAS.md) | Cómo se recopilan las métricas, privacidad y limitaciones |
-| [`docs/SEGURIDAD-AUDITORIA.md`](docs/SEGURIDAD-AUDITORIA.md) | Informe de auditoría (ASVS / Top 10), hallazgos, correcciones y pendientes |
-| [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) | Configuración y despliegue seguro, copias de seguridad, lista de verificación |
-
-## Inicio rápido (desarrollo)
-
-Requisitos: **Node.js 22.13 o superior**.
-
-```bash
-npm ci
-npm run generate-keys      # copie los valores en .env (ver .env.example)
-npm run migrate            # crea o actualiza la base de datos
-npm run seed               # instituciones de referencia
-npm run create-admin       # primer administrador (no hay usuarios por defecto)
-npm run dev                # http://localhost:3000 — panel en /admin
-```
-
-En el primer ingreso el sistema pide configurar la aplicación autenticadora (Google Authenticator, Microsoft
-Authenticator, FreeOTP…) y entrega 10 códigos de recuperación. Sin SMTP configurado, en desarrollo los correos de
-invitación y recuperación se guardan en `storage/correo-desarrollo/`.
-
-## Calidad y verificación
-
-```bash
-npm run verify     # lint + tipos + pruebas + contrato OpenAPI + auditoría de dependencias
-npm test           # 71 pruebas de seguridad y flujos críticos
-npm run openapi:export   # regenera docs/openapi*.json desde el código
-```
+| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y [`docs/adr/`](docs/adr/) | Capas, módulos NestJS, persistencia, concurrencia, decisiones |
+| [`docs/VERSIONES.md`](docs/VERSIONES.md) | Versiones, compatibilidad y política de actualización |
+| [`docs/API.md`](docs/API.md), [`docs/openapi.json`](docs/openapi.json) | Uso de la API, errores, versionado, conflictos de edición |
+| [`docs/PERMISOS.md`](docs/PERMISOS.md) | Matriz de permisos |
+| [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) | Instalación, PostgreSQL seguro, servicio, proxy, salud, monitoreo, respaldos, restauración |
+| [`docs/migracion/`](docs/migracion/) | Inventario de SQLite, runbook de corte y reversión |
+| [`docs/ESTADISTICAS.md`](docs/ESTADISTICAS.md) | Métricas, privacidad y limitaciones |
+| [`docs/SEGURIDAD-AUDITORIA.md`](docs/SEGURIDAD-AUDITORIA.md) | Auditoría de seguridad y pendientes |
+| [`docs/QA-INFORME.md`](docs/QA-INFORME.md) | Informe final de QA (incluye la revisión independiente) |
 
 ## Pendientes antes de publicar
 
-Ver `docs/SEGURIDAD-AUDITORIA.md` §6 y la lista de verificación de `docs/DESPLIEGUE.md` §8. Los principales:
-configurar SMTP y antimalware, ejecutar un escaneo DAST en preproducción, probar la restauración de copias, y
-cargar el contenido oficial (misión, visión, directorio, enlaces SAC y Humano) desde el panel.
+Ver `docs/SEGURIDAD-AUDITORIA.md` y la lista de verificación de `docs/DESPLIEGUE.md` §10: SMTP y antimalware, DAST en
+preproducción, restauración probada, ensayo de migración con la copia real y carga del contenido oficial.
