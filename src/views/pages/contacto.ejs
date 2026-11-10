@@ -1,0 +1,23 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: 'Contacto', intro: 'Visítenos, llámenos o escríbanos.' }) %>
+    <section class="section">
+      <div class="container grid grid--2 items-start">
+        <div class="info-panel">
+          <h3><%= site.nombre %></h3>
+          <ul class="info-list">
+            <li><div><strong>Dirección</strong><%= site.direccion %></div></li>
+            <li><div><strong>Teléfono</strong><a href="tel:<%= site.telefonoLink %>"><%= site.telefono %></a></div></li>
+            <li><div><strong>Correo electrónico</strong><a href="mailto:<%= site.correo %>"><%= site.correo %></a></div></li>
+            <li><div><strong>Horario de atención</strong><%= site.horario.general[0] %><br><%= site.horario.general[1] %></div></li>
+            <li><div><strong>Fondo de Prestaciones Económicas</strong><%= site.horario.prestaciones[0] %><br><%= site.horario.prestaciones[1] %></div></li>
+          </ul>
+          <p class="mt-16 m-b0"><a class="btn btn--white" href="/atencion#pqrsd">Radicar una PQRSD</a></p>
+        </div>
+        <div>
+          <iframe class="map" title="Mapa de ubicación de la Secretaría de Educación de Ibagué" loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups"
+            src="https://www.google.com/maps?q=Carrera+2+No.+17+Ibagu%C3%A9+Tolima&amp;output=embed"></iframe>
+        </div>
+      </div>
+    </section>
+<%- include('../partials/footer') %>

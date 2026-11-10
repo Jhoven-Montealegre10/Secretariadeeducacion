@@ -1,0 +1,50 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: 'Normatividad', intro: 'Actos administrativos expedidos por la Secretaría y normas que rigen el sector educativo.' }) %>
+    <% const anclas = { circular: 'circulares', resolucion: 'resoluciones', decreto: 'decretos', acuerdo: 'acuerdos' }; %>
+    <% grupos.forEach(function (g, i) { %>
+    <section class="section<%= i % 2 ? ' section--alt' : '' %>" id="<%= anclas[g.tipo] %>">
+      <div class="container">
+        <h2 class="title-line"><%= g.nombre %></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Número</th><th>Fecha</th><th>Asunto</th><th>Documento</th></tr></thead>
+            <tbody>
+              <% g.documentos.forEach(function (d) { %>
+              <tr>
+                <td><%= d.numero %> de <%= d.anio %></td>
+                <td><time datetime="<%= d.fecha %>"><%= fecha(d.fecha) %></time></td>
+                <td><%= d.asunto %></td>
+                <td><a href="/documentos/<%= d.id %>" target="_blank" rel="noopener">PDF (<%= tamano(d.tamano) %>)</a></td>
+              </tr>
+              <% }) %>
+              <% if (!g.documentos.length) { %><tr><td colspan="4">No hay documentos publicados en esta categoría.</td></tr><% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <% }) %>
+
+    <section class="section" id="nacional">
+      <div class="container">
+        <h2 class="title-line">Normatividad nacional</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Norma</th><th>Tema</th></tr></thead>
+            <tbody>
+              <tr><td>Ley 115 de 1994</td><td>Ley General de Educación</td></tr>
+              <tr><td>Ley 715 de 2001</td><td>Competencias y recursos (Sistema General de Participaciones)</td></tr>
+              <tr><td>Decreto 1075 de 2015</td><td>Decreto Único Reglamentario del Sector Educación</td></tr>
+              <tr><td>Decreto 2277 de 1979</td><td>Estatuto docente (antiguo)</td></tr>
+              <tr><td>Decreto Ley 1278 de 2002</td><td>Estatuto de profesionalización docente</td></tr>
+              <tr><td>Ley 1620 de 2013</td><td>Sistema Nacional de Convivencia Escolar</td></tr>
+              <tr><td>Ley 1712 de 2014</td><td>Transparencia y acceso a la información pública</td></tr>
+              <tr><td>Ley 1755 de 2015</td><td>Derecho fundamental de petición</td></tr>
+              <tr><td>Ley 1581 de 2012</td><td>Protección de datos personales</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-16">Consulte el texto completo en el <a href="https://www.mineducacion.gov.co/" target="_blank" rel="noopener">Ministerio de Educación Nacional</a>.</p>
+      </div>
+    </section>
+<%- include('../partials/footer') %>

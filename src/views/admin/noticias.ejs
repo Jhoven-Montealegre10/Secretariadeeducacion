@@ -1,0 +1,29 @@
+<%- include('_header') %>
+      <div class="section__head">
+        <h1 class="m-0">Noticias</h1>
+        <a class="btn btn--primary" href="/admin/noticias/nueva">+ Nueva noticia</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Título</th><th>Categoría</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            <% noticias.forEach(function (n) { %>
+            <tr>
+              <td><%= n.fecha_publicacion %></td>
+              <td><%= n.titulo %></td>
+              <td><%= n.categoria %></td>
+              <td><%= n.publicada ? 'Publicada' : 'Borrador' %></td>
+              <td class="actions">
+                <a href="/admin/noticias/<%= n.id %>/editar">Editar</a>
+                <form method="post" action="/admin/noticias/<%= n.id %>/eliminar" data-confirm="¿Eliminar esta noticia? Esta acción no se puede deshacer.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+                  <button class="link-danger" type="submit">Eliminar</button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+            <% if (!noticias.length) { %><tr><td colspan="5">No hay noticias.</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+<%- include('_footer') %>

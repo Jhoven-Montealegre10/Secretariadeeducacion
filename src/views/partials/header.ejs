@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> | Secretaría de Educación de Ibagué</title>
+  <meta name="description" content="<%= typeof description !== 'undefined' ? description : 'Portal oficial de la Secretaría de Educación Municipal de Ibagué: trámites, matrícula, docentes, normatividad, transparencia y atención al ciudadano.' %>">
+  <meta name="theme-color" content="#3366CC">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+
+  <!-- Barra superior GOV.CO (obligatoria para entidades públicas) -->
+  <div class="govco-bar">
+    <div class="container">
+      <a class="govco-logo" href="https://www.gov.co/" target="_blank" rel="noopener" title="Portal del Estado colombiano GOV.CO">
+        <span class="govco-mark" aria-hidden="true">CO</span> GOV.CO
+      </a>
+      <div class="govco-bar__tools" aria-label="Herramientas de accesibilidad">
+        <button type="button" data-font="-" aria-label="Disminuir tamaño de letra">A-</button>
+        <button type="button" data-font="0" aria-label="Tamaño de letra normal" class="hide-sm">A</button>
+        <button type="button" data-font="+" aria-label="Aumentar tamaño de letra">A+</button>
+        <button type="button" data-contrast aria-label="Activar o desactivar alto contraste">◐ <span class="hide-sm">Contraste</span></button>
+      </div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/" aria-label="Ir al inicio - Secretaría de Educación de Ibagué">
+        <!-- Reemplazar por el escudo oficial: public/assets/img/escudo-ibague.png -->
+        <span class="brand__escudo" aria-hidden="true">SEM</span>
+        <span class="brand__text">
+          <small><%= site.entidad %></small>
+          <strong>Secretaría de Educación Municipal</strong>
+        </span>
+      </a>
+      <form class="header-search" action="/buscar" method="get" role="search">
+        <label class="sr-only" for="q">Buscar en el sitio</label>
+        <input id="q" name="q" type="search" maxlength="100" placeholder="¿Qué está buscando?">
+        <button type="submit">Buscar</button>
+      </form>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal">☰ Menú</button>
+    </div>
+  </header>
+
+  <% const cur = (k) => nav === k ? 'aria-current="page"' : ''; %>
+  <nav class="main-nav" id="menu-principal" aria-label="Menú principal">
+    <div class="container">
+      <form class="mobile-search" action="/buscar" method="get" role="search">
+        <label class="sr-only" for="q-m">Buscar</label>
+        <input id="q-m" name="q" type="search" maxlength="100" placeholder="Buscar en el sitio">
+        <button type="submit">Buscar</button>
+      </form>
+      <ul>
+        <li><a href="/" <%- cur('inicio') %>>Inicio</a></li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false" <%- cur('secretaria') %>>La Secretaría</button>
+          <ul class="submenu">
+            <li><a href="/secretaria#mision">Misión y visión</a></li>
+            <li><a href="/secretaria#funciones">Objetivos y funciones</a></li>
+            <li><a href="/secretaria#organigrama">Organigrama</a></li>
+            <li><a href="/secretaria#dependencias">Dependencias y directorio</a></li>
+            <li><a href="/secretaria#sistema-gestion">Sistema de gestión de calidad</a></li>
+          </ul>
+        </li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false" <%- cur('tramites') %>>Trámites y servicios</button>
+          <ul class="submenu">
+            <li><a href="/tramites#matricula">Matrícula y cupos</a></li>
+            <li><a href="/tramites#docentes">Docentes y directivos</a></li>
+            <li><a href="/tramites#prestaciones">Fondo de Prestaciones Económicas</a></li>
+            <li><a href="/tramites#establecimientos">Establecimientos educativos</a></li>
+            <li><a href="/tramites#certificados">Certificados y legalizaciones</a></li>
+            <li><a href="/tramites#sistemas">Sistemas de información</a></li>
+          </ul>
+        </li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false" <%- cur('comunidad') %>>Comunidad educativa</button>
+          <ul class="submenu">
+            <li><a href="/comunidad#estudiantes">Estudiantes y familias</a></li>
+            <li><a href="/comunidad#docentes">Docentes y directivos</a></li>
+            <li><a href="/comunidad#programas">Programas y proyectos</a></li>
+            <li><a href="/comunidad#instituciones">Instituciones educativas</a></li>
+          </ul>
+        </li>
+        <li><a href="/normatividad" <%- cur('normatividad') %>>Normatividad</a></li>
+        <li><a href="/transparencia" <%- cur('transparencia') %>>Transparencia</a></li>
+        <li><a href="/atencion" <%- cur('atencion') %>>Atención al ciudadano</a></li>
+        <li><a href="/noticias" <%- cur('noticias') %>>Noticias</a></li>
+        <li><a href="/contacto" <%- cur('contacto') %>>Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main id="contenido">

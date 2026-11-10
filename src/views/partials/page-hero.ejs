@@ -1,0 +1,7 @@
+    <section class="page-hero">
+      <div class="container">
+        <ol class="breadcrumb"><li><a href="/">Inicio</a></li><% if (typeof parent !== 'undefined' && parent) { %><li><a href="<%= parent[1] %>"><%= parent[0] %></a></li><% } %><li><%= heading %></li></ol>
+        <h1><%= heading %></h1>
+        <% if (typeof intro !== 'undefined' && intro) { %><p><%= intro %></p><% } %>
+      </div>
+    </section>

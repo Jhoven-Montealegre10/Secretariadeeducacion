@@ -1,0 +1,21 @@
+<%- include('_header') %>
+      <h1>Panel de administración</h1>
+      <div class="grid grid--3">
+        <a class="card service" href="/admin/noticias"><h3><%= totalNoticias %> noticias</h3><p>Crear, editar y publicar noticias.</p></a>
+        <a class="card service" href="/admin/documentos"><h3><%= totalDocumentos %> documentos</h3><p>Circulares, resoluciones, decretos y acuerdos en PDF.</p></a>
+        <% if (usuario.rol === 'admin') { %>
+        <a class="card service" href="/admin/pqrsd"><h3>PQRSD</h3><p><% if (pqrsdPorEstado.length) { %><%= pqrsdPorEstado.map((e) => `${e.estado}: ${e.n}`).join(' · ') %><% } else { %>Sin solicitudes<% } %></p></a>
+        <% } %>
+      </div>
+      <% if (actividad.length) { %>
+      <h2 class="mt-40">Actividad reciente</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha (UTC)</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+          <tbody>
+            <% actividad.forEach(function (a) { %><tr><td><%= a.creado_en %></td><td><%= a.email || '—' %></td><td><%= a.accion %></td><td><%= a.detalle %></td></tr><% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+<%- include('_footer') %>

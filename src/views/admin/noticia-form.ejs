@@ -1,0 +1,19 @@
+<%- include('_header') %>
+      <% const err = (k) => errors[k] ? `<p class="field-error">${errors[k]}</p>` : ''; %>
+      <h1><%= title %></h1>
+      <form class="form card card__body narrow" method="post" action="<%= noticia.id ? `/admin/noticias/${noticia.id}` : '/admin/noticias' %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+        <div><label for="titulo">Título *</label><input id="titulo" name="titulo" required maxlength="160" value="<%= noticia.titulo || '' %>"><%- err('titulo') %></div>
+        <div><label for="resumen">Resumen *</label><textarea id="resumen" name="resumen" rows="2" required maxlength="300"><%= noticia.resumen || '' %></textarea><%- err('resumen') %></div>
+        <div><label for="contenido">Contenido *</label><textarea id="contenido" name="contenido" rows="12" required maxlength="20000"><%= noticia.contenido || '' %></textarea><small>Texto plano. Separe los párrafos con una línea en blanco.</small><%- err('contenido') %></div>
+        <div class="row">
+          <div>
+            <label for="categoria">Categoría *</label>
+            <select id="categoria" name="categoria"><% categorias.forEach(function (c) { %><option <%= noticia.categoria === c ? 'selected' : '' %>><%= c %></option><% }) %></select><%- err('categoria') %>
+          </div>
+          <div><label for="fecha_publicacion">Fecha de publicación *</label><input id="fecha_publicacion" name="fecha_publicacion" type="date" required value="<%= noticia.fecha_publicacion || '' %>"><%- err('fecha_publicacion') %></div>
+        </div>
+        <div><label class="check"><input type="checkbox" name="publicada" <%= noticia.publicada ? 'checked' : '' %>> Publicada (visible en el sitio)</label></div>
+        <div><button class="btn btn--primary" type="submit">Guardar</button> <a class="btn btn--outline-blue" href="/admin/noticias">Cancelar</a></div>
+      </form>
+<%- include('_footer') %>

@@ -1,0 +1,21 @@
+<%- include('_header') %>
+      <% const err = (k) => errors[k] ? `<p class="field-error">${errors[k]}</p>` : ''; %>
+      <h1>Publicar documento</h1>
+      <form class="form card card__body narrow" method="post" action="/admin/documentos" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+        <div class="row">
+          <div>
+            <label for="tipo">Tipo *</label>
+            <select id="tipo" name="tipo"><% Object.entries(tipos).forEach(function ([k, v]) { %><option value="<%= k %>" <%= doc.tipo === k ? 'selected' : '' %>><%= v %></option><% }) %></select><%- err('tipo') %>
+          </div>
+          <div><label for="numero">Número *</label><input id="numero" name="numero" required maxlength="30" value="<%= doc.numero || '' %>"><%- err('numero') %></div>
+        </div>
+        <div class="row">
+          <div><label for="anio">Año *</label><input id="anio" name="anio" type="number" min="1990" max="2100" required value="<%= doc.anio || '' %>"><%- err('anio') %></div>
+          <div><label for="fecha">Fecha de expedición *</label><input id="fecha" name="fecha" type="date" required value="<%= doc.fecha || '' %>"><%- err('fecha') %></div>
+        </div>
+        <div><label for="asunto">Asunto *</label><textarea id="asunto" name="asunto" rows="3" required maxlength="300"><%= doc.asunto || '' %></textarea><%- err('asunto') %></div>
+        <div><label for="archivo">Archivo PDF * (máx. 10 MB)</label><input id="archivo" name="archivo" type="file" accept="application/pdf,.pdf" required><%- err('archivo') %></div>
+        <div><button class="btn btn--primary" type="submit">Publicar</button> <a class="btn btn--outline-blue" href="/admin/documentos">Cancelar</a></div>
+      </form>
+<%- include('_footer') %>
