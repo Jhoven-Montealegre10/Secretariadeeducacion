@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inicio | Secretaría de Educación de Ibagué</title>
+  <meta name="description" content="Portal oficial de la Secretaría de Educación Municipal de Ibagué. Trámites, matrículas, docentes, normatividad, transparencia y atención al ciudadano.">
+  <meta name="theme-color" content="#3366CC">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+
+  <!-- Barra superior GOV.CO (obligatoria para entidades públicas) -->
+  <div class="govco-bar">
+    <div class="container">
+      <a class="govco-logo" href="https://www.gov.co/" target="_blank" rel="noopener" title="Portal del Estado colombiano GOV.CO">
+        <span class="govco-mark" aria-hidden="true">CO</span> GOV.CO
+      </a>
+      <div class="govco-bar__tools" aria-label="Herramientas de accesibilidad">
+        <button type="button" data-font="-" aria-label="Disminuir tamaño de letra">A-</button>
+        <button type="button" data-font="0" aria-label="Tamaño de letra normal" class="hide-sm">A</button>
+        <button type="button" data-font="+" aria-label="Aumentar tamaño de letra">A+</button>
+        <button type="button" data-contrast aria-label="Activar o desactivar alto contraste">◐ <span class="hide-sm">Contraste</span></button>
+      </div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html" aria-label="Ir al inicio - Secretaría de Educación de Ibagué">
+        <!-- Reemplazar por el escudo oficial: assets/img/escudo-ibague.png -->
+        <span class="brand__escudo" aria-hidden="true">SEM</span>
+        <span class="brand__text">
+          <small>Alcaldía de Ibagué</small>
+          <strong>Secretaría de Educación Municipal</strong>
+        </span>
+      </a>
+      <form class="header-search" action="buscar.html" role="search">
+        <label class="sr-only" for="q">Buscar en el sitio</label>
+        <input id="q" name="q" type="search" placeholder="¿Qué está buscando?">
+        <button type="submit">Buscar</button>
+      </form>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal">☰ Menú</button>
+    </div>
+  </header>
+
+  <nav class="main-nav" id="menu-principal" aria-label="Menú principal">
+    <div class="container">
+      <form class="mobile-search" action="buscar.html" role="search">
+        <label class="sr-only" for="q-m">Buscar</label>
+        <input id="q-m" name="q" type="search" placeholder="Buscar en el sitio">
+        <button type="submit">Buscar</button>
+      </form>
+      <ul>
+        <li><a href="index.html" aria-current="page">Inicio</a></li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false">La Secretaría</button>
+          <ul class="submenu">
+            <li><a href="secretaria.html#mision">Misión y visión</a></li>
+            <li><a href="secretaria.html#funciones">Objetivos y funciones</a></li>
+            <li><a href="secretaria.html#organigrama">Organigrama</a></li>
+            <li><a href="secretaria.html#dependencias">Dependencias y directorio</a></li>
+            <li><a href="secretaria.html#sistema-gestion">Sistema de gestión de calidad</a></li>
+          </ul>
+        </li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false">Trámites y servicios</button>
+          <ul class="submenu">
+            <li><a href="tramites.html#matricula">Matrícula y cupos</a></li>
+            <li><a href="tramites.html#docentes">Docentes y directivos</a></li>
+            <li><a href="tramites.html#prestaciones">Fondo de Prestaciones Económicas</a></li>
+            <li><a href="tramites.html#establecimientos">Establecimientos educativos</a></li>
+            <li><a href="tramites.html#certificados">Certificados y legalizaciones</a></li>
+            <li><a href="tramites.html#sistemas">Sistemas de información</a></li>
+          </ul>
+        </li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false">Comunidad educativa</button>
+          <ul class="submenu">
+            <li><a href="comunidad.html#estudiantes">Estudiantes y familias</a></li>
+            <li><a href="comunidad.html#docentes">Docentes y directivos</a></li>
+            <li><a href="comunidad.html#programas">Programas y proyectos</a></li>
+            <li><a href="comunidad.html#instituciones">Instituciones educativas</a></li>
+          </ul>
+        </li>
+        <li class="has-sub">
+          <button class="nav-btn" type="button" aria-expanded="false">Normatividad</button>
+          <ul class="submenu">
+            <li><a href="normatividad.html#circulares">Circulares</a></li>
+            <li><a href="normatividad.html#resoluciones">Resoluciones</a></li>
+            <li><a href="normatividad.html#decretos">Decretos y acuerdos</a></li>
+            <li><a href="normatividad.html#nacional">Normatividad nacional</a></li>
+          </ul>
+        </li>
+        <li><a href="transparencia.html" >Transparencia</a></li>
+        <li><a href="atencion.html" >Atención al ciudadano</a></li>
+        <li><a href="noticias.html" >Noticias</a></li>
+        <li><a href="contacto.html" >Contacto</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main id="contenido">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <span class="hero__tag">Alcaldía de Ibagué · Tolima</span>
+        <h1>Secretaría de Educación Municipal de Ibagué</h1>
+        <p>Trabajamos por una educación pública de calidad, incluyente y pertinente para niñas, niños, adolescentes, jóvenes y adultos de Ibagué. Encuentre aquí trámites, servicios e información de la comunidad educativa.</p>
+        <div class="hero__actions">
+          <a class="btn btn--white" href="tramites.html">Ver trámites y servicios</a>
+          <a class="btn btn--outline" href="atencion.html#pqrsd">Radicar una PQRSD</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Accesos rápidos -->
+    <section class="quick" aria-label="Accesos rápidos">
+      <div class="container quick__grid">
+        <a class="quick__item" href="tramites.html#matricula">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></span>
+          Matrícula y cupos
+        </a>
+        <a class="quick__item" href="tramites.html#docentes">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+          Certificados laborales
+        </a>
+        <a class="quick__item" href="tramites.html#prestaciones">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.5"/><path d="M6 6V4h12v2"/></svg></span>
+          Prestaciones económicas
+        </a>
+        <a class="quick__item" href="atencion.html#pqrsd">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          PQRSD
+        </a>
+        <a class="quick__item" href="normatividad.html#circulares">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+          Circulares
+        </a>
+        <a class="quick__item" href="transparencia.html">
+          <span class="quick__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          Transparencia
+        </a>
+      </div>
+    </section>
+
+    <!-- Noticias -->
+    <section class="section">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <span class="eyebrow">Actualidad</span>
+            <h2 class="title-line">Noticias y comunicados</h2>
+          </div>
+          <a class="btn btn--outline-blue" href="noticias.html">Ver todas las noticias</a>
+        </div>
+        <!-- TODO: migrar las noticias reales del portal anterior -->
+        <div class="grid grid--3">
+          <article class="card">
+            <div class="card__img">Proceso de matrícula</div>
+            <div class="card__body">
+              <span class="badge">Cobertura</span>
+              <p class="card__date">Contenido de ejemplo</p>
+              <h3>Inscripciones para estudiantes nuevos en instituciones oficiales</h3>
+              <p>Conozca el cronograma, los requisitos y los canales para solicitar cupo en los colegios oficiales de Ibagué.</p>
+              <a class="card__link" href="tramites.html#matricula">Leer más</a>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__img">Circulares vigentes</div>
+            <div class="card__body">
+              <span class="badge badge--yellow">Normatividad</span>
+              <p class="card__date">Contenido de ejemplo</p>
+              <h3>Consulte las circulares expedidas por la Secretaría</h3>
+              <p>Directrices para rectores, docentes, directivos y personal administrativo de las instituciones educativas.</p>
+              <a class="card__link" href="normatividad.html#circulares">Leer más</a>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card__img">Comunidad educativa</div>
+            <div class="card__body">
+              <span class="badge badge--green">Calidad educativa</span>
+              <p class="card__date">Contenido de ejemplo</p>
+              <h3>Programas para el fortalecimiento de la calidad educativa</h3>
+              <p>Formación docente, alimentación escolar, transporte y bienestar para la comunidad estudiantil.</p>
+              <a class="card__link" href="comunidad.html#programas">Leer más</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Servicios por público -->
+    <section class="section section--alt">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <span class="eyebrow">¿Quién es usted?</span>
+            <h2 class="title-line">Servicios según su perfil</h2>
+          </div>
+        </div>
+        <div class="grid grid--4">
+          <a class="card service" href="comunidad.html#estudiantes" style="text-decoration:none">
+            <h3>Estudiantes y familias</h3>
+            <p>Matrículas, cupos, traslados, certificados de estudio y programas de bienestar.</p>
+          </a>
+          <a class="card service" href="comunidad.html#docentes" style="text-decoration:none">
+            <h3>Docentes y directivos</h3>
+            <p>Certificados laborales, novedades de nómina, prestaciones, escalafón y formación.</p>
+          </a>
+          <a class="card service" href="tramites.html#establecimientos" style="text-decoration:none">
+            <h3>Establecimientos educativos</h3>
+            <p>Licencias de funcionamiento, costos educativos y reportes de información.</p>
+          </a>
+          <a class="card service" href="atencion.html" style="text-decoration:none">
+            <h3>Ciudadanía</h3>
+            <p>Peticiones, quejas, reclamos, sugerencias, denuncias y acceso a información pública.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sistemas de información + horario -->
+    <section class="section">
+      <div class="container grid grid--2" style="align-items:start">
+        <div>
+          <span class="eyebrow">En línea</span>
+          <h2 class="title-line">Sistemas de información</h2>
+          <p>Acceda a las plataformas del sector educativo para realizar trámites sin desplazarse.</p>
+          <div class="grid grid--2">
+            <div class="card card__body">
+              <h3>SAC</h3>
+              <p>Sistema de Atención al Ciudadano: radicación y seguimiento de solicitudes.</p>
+              <a class="card__link" href="tramites.html#sistemas">Ingresar</a>
+            </div>
+            <div class="card card__body">
+              <h3>Humano en Línea</h3>
+              <p>Certificados laborales, desprendibles de pago y novedades del personal.</p>
+              <a class="card__link" href="tramites.html#sistemas">Ingresar</a>
+            </div>
+            <div class="card card__body">
+              <h3>SIMAT</h3>
+              <p>Sistema Integrado de Matrícula para instituciones educativas.</p>
+              <a class="card__link" href="tramites.html#sistemas">Ingresar</a>
+            </div>
+            <div class="card card__body">
+              <h3>FOMAG</h3>
+              <p>Prestaciones sociales, cesantías y salud del magisterio.</p>
+              <a class="card__link" href="https://www.fomag.gov.co/" target="_blank" rel="noopener">Ingresar</a>
+            </div>
+          </div>
+        </div>
+        <aside class="info-panel" aria-label="Horarios de atención">
+          <h3>Horario de atención al público</h3>
+          <ul class="info-list">
+            <li><div><strong>Secretaría de Educación</strong>Lunes a jueves: 7:30 a.m. – 4:30 p.m.<br>Viernes: 7:00 a.m. – 3:00 p.m.</div></li>
+            <li><div><strong>Fondo de Prestaciones Económicas</strong>Lunes, miércoles y jueves: 7:30 a.m. – 3:30 p.m.<br>Martes y viernes: sin atención al público.</div></li>
+            <li><div><strong>Dirección</strong>Carrera 2 No. 17, piso 2 – Antiguo Edificio Cafeteros, Ibagué</div></li>
+            <li><div><strong>Contacto</strong><a href="tel:+576082623256">(608) 262 3256</a> · <a href="mailto:educacion@ibague.gov.co">educacion@ibague.gov.co</a></div></li>
+          </ul>
+          <p style="margin:16px 0 0"><a class="btn btn--white" href="contacto.html">Cómo llegar</a></p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Cifras -->
+    <section class="section section--blue">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <span class="eyebrow">Transparencia</span>
+            <h2 class="title-line">Información pública al alcance de todos</h2>
+          </div>
+        </div>
+        <div class="grid grid--3">
+          <a class="card card__body" href="transparencia.html#planeacion" style="text-decoration:none">
+            <h3>Planes y presupuesto</h3>
+            <p>Plan de acción, plan de desarrollo sectorial, presupuesto y ejecución.</p>
+          </a>
+          <a class="card card__body" href="transparencia.html#contratacion" style="text-decoration:none">
+            <h3>Contratación</h3>
+            <p>Procesos contractuales publicados en SECOP y plan anual de adquisiciones.</p>
+          </a>
+          <a class="card card__body" href="transparencia.html#informes" style="text-decoration:none">
+            <h3>Informes y rendición de cuentas</h3>
+            <p>Informes de gestión, control interno y rendición de cuentas a la ciudadanía.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h4>Secretaría de Educación Municipal de Ibagué</h4>
+        <ul class="footer-list">
+          <li><strong>Dirección:</strong> Carrera 2 No. 17, piso 2 – Antiguo Edificio Cafeteros, Ibagué, Tolima</li>
+          <li><strong>Teléfono:</strong> <a href="tel:+576082623256">(608) 262 3256</a></li>
+          <li><strong>Correo:</strong> <a href="mailto:educacion@ibague.gov.co">educacion@ibague.gov.co</a></li>
+          <li><strong>Horario:</strong> lunes a jueves 7:30 a.m. – 4:30 p.m.; viernes 7:00 a.m. – 3:00 p.m.</li>
+        </ul>
+        <!-- TODO: reemplazar "#" por las URL oficiales de redes sociales -->
+        <div class="social" aria-label="Redes sociales">
+          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9h3V5h-3c-2.8 0-4 1.7-4 4.3V11H7v4h3v9h4v-9h3l1-4h-4V9.5c0-.3.2-.5.5-.5z"/></svg></a>
+          <a href="#" aria-label="X (Twitter)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 3h3.3l-7.2 8.2L22 21h-6.6l-5.2-6.8L4.3 21H1l7.7-8.8L.6 3h6.8l4.7 6.2L17.5 3zm-1.2 16h1.8L6.4 4.9H4.5L16.3 19z"/></svg></a>
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4zM17.3 5.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM21.9 7c-.1-1.7-.5-3.2-1.7-4.4C19 1.4 17.5 1 15.8.9 14.1.8 9.9.8 8.2.9 6.5 1 5 1.4 3.8 2.6 2.6 3.8 2.2 5.3 2.1 7 2 8.7 2 12.9 2.1 14.6c.1 1.7.5 3.2 1.7 4.4 1.2 1.2 2.7 1.6 4.4 1.7 1.7.1 5.9.1 7.6 0 1.7-.1 3.2-.5 4.4-1.7 1.2-1.2 1.6-2.7 1.7-4.4.1-1.7.1-5.9 0-7.6z"/></svg></a>
+          <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12 31 31 0 0 0 1 16.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.7 15V9l5.8 3-5.8 3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h4>Enlaces de interés</h4>
+        <ul class="footer-list">
+          <li><a href="https://www.ibague.gov.co/" target="_blank" rel="noopener">Alcaldía de Ibagué</a></li>
+          <li><a href="https://www.mineducacion.gov.co/" target="_blank" rel="noopener">Ministerio de Educación Nacional</a></li>
+          <li><a href="https://www.colombiaaprende.edu.co/" target="_blank" rel="noopener">Colombia Aprende</a></li>
+          <li><a href="https://www.icfes.gov.co/" target="_blank" rel="noopener">ICFES</a></li>
+          <li><a href="https://www.fomag.gov.co/" target="_blank" rel="noopener">FOMAG</a></li>
+          <li><a href="https://www.cnsc.gov.co/" target="_blank" rel="noopener">Comisión Nacional del Servicio Civil</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Atención al ciudadano</h4>
+        <ul class="footer-list">
+          <li><a href="atencion.html#pqrsd">Radicar PQRSD</a></li>
+          <li><a href="tramites.html">Trámites y servicios</a></li>
+          <li><a href="atencion.html#notificaciones">Notificaciones judiciales</a></li>
+          <li><a href="atencion.html#preguntas">Preguntas frecuentes</a></li>
+          <li><a href="transparencia.html">Transparencia y acceso a la información</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Políticas</h4>
+        <ul class="footer-list">
+          <li><a href="transparencia.html#datos-personales">Política de tratamiento de datos personales</a></li>
+          <li><a href="transparencia.html#terminos">Términos y condiciones de uso</a></li>
+          <li><a href="transparencia.html#accesibilidad">Accesibilidad</a></li>
+          <li><a href="mapa-sitio.html">Mapa del sitio</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-govco">
+      <div class="container">
+        <a class="govco-logo" href="https://www.gov.co/" target="_blank" rel="noopener"><span class="govco-mark" aria-hidden="true">CO</span> GOV.CO</a>
+        <small>© <span data-year>2026</span> Secretaría de Educación Municipal de Ibagué – Alcaldía de Ibagué</small>
+      </div>
+    </div>
+  </footer>
+
+  <button class="to-top" type="button" aria-label="Volver arriba">↑</button>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
