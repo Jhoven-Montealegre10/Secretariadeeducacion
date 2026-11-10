@@ -9,10 +9,10 @@ exports.valid = valid;
 const sessionCookieName = (isProd) => (isProd ? '__Host-sem.sid' : 'sem.sid');
 exports.sessionCookieName = sessionCookieName;
 function regenerate(req) {
-    return new Promise((resolve, reject) => req.session.regenerate((err) => (err ? reject(err) : resolve())));
+    return new Promise((resolve, reject) => req.session.regenerate((err) => (err ? reject(err instanceof Error ? err : new Error(String(err))) : resolve())));
 }
 function save(req) {
-    return new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err) : resolve())));
+    return new Promise((resolve, reject) => req.session.save((err) => (err ? reject(err instanceof Error ? err : new Error(String(err))) : resolve())));
 }
 function destroy(req, res, isProd) {
     return new Promise((resolve) => {

@@ -67,7 +67,9 @@ let DocsController = class DocsController {
             return;
         (0, headers_1.noStore)(res);
         res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-        res.type('html').send((0, openapi_document_1.swaggerPage)({ title: 'API completa – SEM Ibagué', specUrl: '/api/v1/openapi.json', mode: this.config.api.docsTryItOut ? 'admin' : 'readonly' }));
+        res
+            .type('html')
+            .send((0, openapi_document_1.swaggerPage)({ title: 'API completa – SEM Ibagué', specUrl: '/api/v1/openapi.json', mode: this.config.api.docsTryItOut ? 'admin' : 'readonly' }));
     }
 };
 exports.DocsController = DocsController;

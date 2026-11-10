@@ -49,7 +49,14 @@ export interface AppConfig {
   session: { idleMs: number; absoluteMs: number; reauthMs: number; pendingMfaMs: number };
   mfa: { issuer: string };
   mail: { from: string; smtpUrl: string };
-  uploads: { maxDocumentBytes: number; maxImageBytes: number; maxAudioBytes: number; maxFilesPerRequest: number; maxRequestBytes: number; malwareScanCommand: string };
+  uploads: {
+    maxDocumentBytes: number;
+    maxImageBytes: number;
+    maxAudioBytes: number;
+    maxFilesPerRequest: number;
+    maxRequestBytes: number;
+    malwareScanCommand: string;
+  };
   stats: { retentionDays: number; geoHeader: string; flushIntervalMs: number; flushBatchSize: number };
   cache: { ttlSeconds: number; maxEntries: number };
   api: { corsOrigins: string[]; docsTryItOut: boolean };
@@ -66,7 +73,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const isProd = nodeEnv === 'production';
   const isTest = nodeEnv === 'test';
   const num = (name: string, fallback: number) => (env[name] ? Number(env[name]) : fallback);
-  const list = (name: string) => (env[name] || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const list = (name: string) =>
+    (env[name] || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   const errors: string[] = [];
 
   const secret = (name: string, minLength: number): string => {

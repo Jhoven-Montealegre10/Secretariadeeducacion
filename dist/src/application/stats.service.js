@@ -51,7 +51,7 @@ function device(ua) {
 function source(referer, host, hasCampaign) {
     if (hasCampaign)
         return { fuente: 'campana', dominio: null };
-    let refHost = '';
+    let refHost;
     try {
         refHost = referer ? new URL(referer).hostname.toLowerCase() : '';
     }

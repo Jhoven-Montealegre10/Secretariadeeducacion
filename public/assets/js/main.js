@@ -49,14 +49,14 @@
   function store(k, v) {
     try {
       localStorage.setItem(k, v);
-    } catch (e) {
+    } catch {
       /* almacenamiento no disponible */
     }
   }
   function read(k) {
     try {
       return localStorage.getItem(k);
-    } catch (e) {
+    } catch {
       return null;
     }
   }

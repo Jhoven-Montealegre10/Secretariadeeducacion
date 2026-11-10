@@ -86,7 +86,12 @@ export function errorCodes(spec: RouteSpec): number[] {
 function objectProperties(schema: z.ZodType | undefined): Array<{ name: string; schema: Record<string, unknown>; required: boolean; description?: string }> {
   if (!schema) return [];
   const json = toOpenApi(schema, 'input') as { properties?: Record<string, Record<string, unknown>>; required?: string[] };
-  return Object.entries(json.properties ?? {}).map(([name, s]) => ({ name, schema: s, required: (json.required ?? []).includes(name), description: s.description as string | undefined }));
+  return Object.entries(json.properties ?? {}).map(([name, s]) => ({
+    name,
+    schema: s,
+    required: (json.required ?? []).includes(name),
+    description: s.description as string | undefined,
+  }));
 }
 
 type Spec = Omit<RouteSpec, 'kind' | 'method' | 'path'>;
@@ -97,7 +102,13 @@ function decorate(kind: RouteSpec['kind'], method: RouteSpec['method'], path: st
   const register: MethodDecorator = (target, key) => {
     ROUTES.push({ ...spec, operationId: `${(target as { constructor: { name: string } }).constructor.name}_${String(key)}` });
   };
-  const METHODS = { get: RequestMethod.GET, post: RequestMethod.POST, put: RequestMethod.PUT, patch: RequestMethod.PATCH, delete: RequestMethod.DELETE } as const;
+  const METHODS = {
+    get: RequestMethod.GET,
+    post: RequestMethod.POST,
+    put: RequestMethod.PUT,
+    patch: RequestMethod.PATCH,
+    delete: RequestMethod.DELETE,
+  } as const;
   // La ruta se declara UNA vez (formato OpenAPI {param}) y se registra en Nest como :param.
   const nestPath = path.replace(/\{(\w+)\}/g, ':$1');
   const decorators: Array<ClassDecorator | MethodDecorator | PropertyDecorator> = [
@@ -112,15 +123,27 @@ function decorate(kind: RouteSpec['kind'], method: RouteSpec['method'], path: st
     return applyDecorators(...decorators);
   }
 
-  decorators.push(ApiTags(...(spec.tags ?? [])), ApiOperation({ summary: spec.summary, description: [spec.description, describeAuth(spec.auth), needsCsrf(spec) ? '**CSRF:** requiere la cabecera `X-CSRF-Token`.' : ''].filter(Boolean).join('\n\n') }));
+  decorators.push(
+    ApiTags(...(spec.tags ?? [])),
+    ApiOperation({
+      summary: spec.summary,
+      description: [spec.description, describeAuth(spec.auth), needsCsrf(spec) ? '**CSRF:** requiere la cabecera `X-CSRF-Token`.' : '']
+        .filter(Boolean)
+        .join('\n\n'),
+    }),
+  );
   if (typeof spec.auth === 'string' && spec.auth.includes('.')) decorators.push(ApiExtension('x-permiso', spec.auth));
   for (const p of objectProperties(spec.request?.params)) decorators.push(ApiParam({ name: p.name, required: true, schema: p.schema }));
-  for (const q of objectProperties(spec.request?.query)) decorators.push(ApiQuery({ name: q.name, required: q.required, schema: q.schema, description: q.description }));
+  for (const q of objectProperties(spec.request?.query))
+    decorators.push(ApiQuery({ name: q.name, required: q.required, schema: q.schema, description: q.description }));
   if (spec.upload) decorators.push(ApiConsumes('multipart/form-data'), ApiBody({ required: true, schema: toOpenApi(spec.upload.form, 'input') }));
   else if (spec.request?.body) decorators.push(ApiBody({ required: true, schema: toOpenApi(spec.request.body, 'input') }));
 
   if (spec.file) {
-    decorators.push(ApiProduces(spec.file.mime), ApiResponse({ status, description: spec.file.description, content: { [spec.file.mime]: { schema: { type: 'string', format: 'binary' } } } }));
+    decorators.push(
+      ApiProduces(spec.file.mime),
+      ApiResponse({ status, description: spec.file.description, content: { [spec.file.mime]: { schema: { type: 'string', format: 'binary' } } } }),
+    );
   } else if (spec.response?.schema) {
     decorators.push(ApiResponse({ status, description: spec.response.description, schema: toOpenApi(spec.response.schema) }));
   } else {

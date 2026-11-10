@@ -82,7 +82,10 @@ let ApiInterceptor = class ApiInterceptor {
             return Promise.reject(new errors_1.PayloadTooLargeError(`La carga supera el máximo de ${Math.round(maxRequest / 1048576)} MB por envío.`));
         }
         const maxBytes = upload.maxBytes(this.config);
-        const m = (0, multer_1.default)({ storage: multer_1.default.memoryStorage(), limits: { fileSize: maxBytes, files: upload.maxFiles, fields: 20, fieldSize: 20 * 1024, parts: upload.maxFiles + 20 } });
+        const m = (0, multer_1.default)({
+            storage: multer_1.default.memoryStorage(),
+            limits: { fileSize: maxBytes, files: upload.maxFiles, fields: 20, fieldSize: 20 * 1024, parts: upload.maxFiles + 20 },
+        });
         const handler = upload.maxFiles > 1 ? m.array(upload.field, upload.maxFiles) : m.single(upload.field);
         return new Promise((resolve, reject) => {
             handler(req, res, (err) => {

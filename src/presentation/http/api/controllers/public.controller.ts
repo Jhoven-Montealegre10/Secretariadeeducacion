@@ -84,7 +84,15 @@ export class PublicController {
   async getPage(@Req() req: AppRequest) {
     const p = await this.pages.getPublished(valid(req, 'params', P.SlugParams).slug);
     if (!p) throw new NotFoundError('La página no existe.');
-    return { data: { slug: p.slug, titulo: p.titulo, resumen: p.resumen, bloques: p.bloques, medios: (await this.media.findByIds(mediosEnBloques(p.bloques))).map(P.toPublicMedia) } };
+    return {
+      data: {
+        slug: p.slug,
+        titulo: p.titulo,
+        resumen: p.resumen,
+        bloques: p.bloques,
+        medios: (await this.media.findByIds(mediosEnBloques(p.bloques))).map(P.toPublicMedia),
+      },
+    };
   }
 
   @Endpoint('get', '/api/v1/public/sliders/{ubicacion}', {
@@ -100,7 +108,13 @@ export class PublicController {
     return {
       data: {
         ubicacion: s.ubicacion,
-        diapositivas: s.diapositivas.map((d) => ({ titulo: d.titulo, texto: d.texto, enlace: d.enlace, textoEnlace: d.textoEnlace, imagen: P.toImage(d.medio) as NonNullable<ReturnType<typeof P.toImage>> })),
+        diapositivas: s.diapositivas.map((d) => ({
+          titulo: d.titulo,
+          texto: d.texto,
+          enlace: d.enlace,
+          textoEnlace: d.textoEnlace,
+          imagen: P.toImage(d.medio) as NonNullable<ReturnType<typeof P.toImage>>,
+        })),
       },
     };
   }

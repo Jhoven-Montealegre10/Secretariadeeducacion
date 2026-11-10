@@ -90,9 +90,11 @@ export class MetricsService implements OnModuleDestroy {
     const byRoute = new Map<string, Sample[]>();
     for (const s of this.samples) byRoute.set(s.route, [...(byRoute.get(s.route) ?? []), s]);
     const pool = this.db.poolStats();
-    let serverConnections: number | null = null;
+    let serverConnections: number | null;
     try {
-      serverConnections = await this.db.scalar<number>("SELECT COUNT(*) FROM pg_stat_activity WHERE datname = current_database() AND application_name LIKE 'semibague-%'");
+      serverConnections = await this.db.scalar<number>(
+        "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = current_database() AND application_name LIKE 'semibague-%'",
+      );
     } catch {
       serverConnections = null;
     }
@@ -109,7 +111,13 @@ export class MetricsService implements OnModuleDestroy {
       memoria: { rssMb: mb(mem.rss), heapUsadoMb: mb(mem.heapUsed), heapTotalMb: mb(mem.heapTotal) },
       cpu: { usuarioMs: Math.round(cpu.user / 1000), sistemaMs: Math.round(cpu.system / 1000) },
       eventLoopRetrasoP99Ms: Math.round((this.loop.percentile(99) / 1e6) * 10) / 10,
-      baseDeDatos: { poolMaximo: this.config.db.poolMax, conexiones: pool.total, libres: pool.idle, enEspera: pool.waiting, conexionesServidor: serverConnections },
+      baseDeDatos: {
+        poolMaximo: this.config.db.poolMax,
+        conexiones: pool.total,
+        libres: pool.idle,
+        enEspera: pool.waiting,
+        conexionesServidor: serverConnections,
+      },
       cache: { entradas: cache.entries, aciertos: cache.hits, fallos: cache.misses, escuchandoInvalidaciones: cache.listening },
       estadisticas: { pendientes: this.stats.pending(), descartadas: this.stats.dropped },
       http: {

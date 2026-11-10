@@ -15,7 +15,7 @@ const MAX_SAFE = 9007199254740991;
 
 /** Registra un esquema con nombre (aparece en components.schemas). */
 export function named<T extends z.ZodType>(name: string, schema: T): T {
-  return schema.meta({ id: name }) as T;
+  return schema.meta({ id: name });
 }
 
 /** Limpia el JSON Schema: $ref a components, sin $id ni límites enteros por defecto de Zod. */

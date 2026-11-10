@@ -180,7 +180,8 @@ export class ContentController {
     auth: 'pages.update',
     bodyLimit: 1024 * KB,
     summary: 'Editar o publicar página',
-    description: 'Cambiar a publicada, o editar una página publicada, exige `pages.publish`. Las páginas del sistema no cambian de slug. Envíe `version` para detectar ediciones simultáneas.',
+    description:
+      'Cambiar a publicada, o editar una página publicada, exige `pages.publish`. Las páginas del sistema no cambian de slug. Envíe `version` para detectar ediciones simultáneas.',
     request: { params: IdParams, body: S.PageUpdate },
     errors: [409],
     response: { description: 'Página guardada', schema: S.PageOne },

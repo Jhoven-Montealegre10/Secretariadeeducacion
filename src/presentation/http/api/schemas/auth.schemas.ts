@@ -21,7 +21,10 @@ export const MfaVerifyBody = z
 export const MfaEnableBody = z.strictObject({ codigo: Totp });
 export const ReauthBody = z.strictObject({ password: Password, codigo: Totp });
 export const RecoveryRequestBody = z.strictObject({ email: Email });
-export const ResetBody = z.strictObject({ token: z.string().min(20).max(200).meta({ example: 'token-ficticio-de-ejemplo-0000000000' }), password: NewPassword });
+export const ResetBody = z.strictObject({
+  token: z.string().min(20).max(200).meta({ example: 'token-ficticio-de-ejemplo-0000000000' }),
+  password: NewPassword,
+});
 export const ChangePasswordBody = z.strictObject({ actual: Password, nueva: NewPassword });
 export const ProfileBody = z.strictObject({ nombre: z.string().trim().min(3).max(120).meta({ example: 'Ana Gómez' }) });
 
@@ -45,7 +48,10 @@ export const SessionUser = named(
     permisos: z.array(z.string()).meta({ example: ['dashboard.access', 'news.read'] }),
   }),
 );
-export const SessionResponse = single('Sesion', z.strictObject({ usuario: SessionUser, csrfToken: z.string(), expiraPorInactividadEnSegundos: z.number().int() }));
+export const SessionResponse = single(
+  'Sesion',
+  z.strictObject({ usuario: SessionUser, csrfToken: z.string(), expiraPorInactividadEnSegundos: z.number().int() }),
+);
 export const CsrfResponse = single('Csrf', z.strictObject({ csrfToken: z.string().meta({ example: 'k3J9-ejemplo-ficticio' }) }));
 export const MfaSetup = single(
   'ConfiguracionMfa',
@@ -58,7 +64,9 @@ export const MfaSetup = single(
 export const RecoveryCodes = single(
   'CodigosRecuperacion',
   z.strictObject({
-    codigosRecuperacion: z.array(z.string()).meta({ example: ['ABCDE-FGHJK', 'LMNPQ-RSTUV'], description: 'Se muestran UNA sola vez. Guárdelos en un lugar seguro.' }),
+    codigosRecuperacion: z
+      .array(z.string())
+      .meta({ example: ['ABCDE-FGHJK', 'LMNPQ-RSTUV'], description: 'Se muestran UNA sola vez. Guárdelos en un lugar seguro.' }),
     csrfToken: z.string().optional(),
   }),
 );

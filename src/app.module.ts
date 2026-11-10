@@ -22,7 +22,14 @@ import { dataSourceOptions } from './infrastructure/database/data-source';
 import { Db } from './infrastructure/database/db.service';
 import { MailModule } from './infrastructure/mail/mailer.service';
 import { PqrsdRepository, StatsRepository } from './infrastructure/repositories/citizen.repositories';
-import { DocumentRepository, InstitutionRepository, MediaRepository, NewsRepository, PageRepository, SliderRepository } from './infrastructure/repositories/content.repositories';
+import {
+  DocumentRepository,
+  InstitutionRepository,
+  MediaRepository,
+  NewsRepository,
+  PageRepository,
+  SliderRepository,
+} from './infrastructure/repositories/content.repositories';
 import { AuditRepository, CredentialRepository, RoleRepository, UserRepository } from './infrastructure/repositories/identity.repositories';
 import { SecurityModule } from './infrastructure/security/security.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
@@ -104,7 +111,18 @@ export class CitizenModule {}
  */
 @Module({
   imports: [IdentityModule, ContentModule, CitizenModule],
-  controllers: [HealthController, DocsController, AuthController, AdminController, ContentController, PublicController, PqrsdWebController, SiteController, AdminWebController, PageSlugController],
+  controllers: [
+    HealthController,
+    DocsController,
+    AuthController,
+    AdminController,
+    ContentController,
+    PublicController,
+    PqrsdWebController,
+    SiteController,
+    AdminWebController,
+    PageSlugController,
+  ],
   providers: [
     CsrfService,
     RateLimiter,

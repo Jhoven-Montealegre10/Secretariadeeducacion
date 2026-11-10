@@ -63,7 +63,8 @@ export const PublicInstitutions = single('Instituciones', z.array(z.strictObject
 export const SlugParams = z.object({ slug: z.string().max(90).meta({ example: 'secretaria' }) });
 export const LocationParams = z.object({ ubicacion: z.string().max(90).meta({ example: 'inicio' }) });
 
-export const toImage = (m: MediaRecord | undefined | null) => (m ? { url: mediaUrl(m), textoAlternativo: m.textoAlternativo, ancho: m.ancho ?? null, alto: m.alto ?? null } : null);
+export const toImage = (m: MediaRecord | undefined | null) =>
+  m ? { url: mediaUrl(m), textoAlternativo: m.textoAlternativo, ancho: m.ancho ?? null, alto: m.alto ?? null } : null;
 export const toPublicMedia = (m: MediaRecord) => ({
   id: m.id,
   tipo: m.tipo,

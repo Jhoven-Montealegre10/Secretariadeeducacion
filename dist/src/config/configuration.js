@@ -23,7 +23,10 @@ function loadConfig(env = process.env) {
     const isProd = nodeEnv === 'production';
     const isTest = nodeEnv === 'test';
     const num = (name, fallback) => (env[name] ? Number(env[name]) : fallback);
-    const list = (name) => (env[name] || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const list = (name) => (env[name] || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
     const errors = [];
     const secret = (name, minLength) => {
         const value = env[name];

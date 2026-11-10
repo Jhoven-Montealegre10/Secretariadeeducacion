@@ -56,7 +56,11 @@ export class ConflictError extends AppError {
 /** Otro usuario guardó el recurso después de que usted lo abrió (bloqueo optimista). */
 export class EditConflictError extends ConflictError {
   constructor(versionActual: number) {
-    super('Otra persona modificó este contenido después de que usted lo abrió. Recargue para ver la versión actual antes de guardar.', { versionActual }, 'EDIT_CONFLICT');
+    super(
+      'Otra persona modificó este contenido después de que usted lo abrió. Recargue para ver la versión actual antes de guardar.',
+      { versionActual },
+      'EDIT_CONFLICT',
+    );
   }
 }
 

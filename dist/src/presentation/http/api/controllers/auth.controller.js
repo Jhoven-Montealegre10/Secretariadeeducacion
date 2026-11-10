@@ -96,7 +96,11 @@ let AuthController = class AuthController {
     sessionData(req) {
         if (!req.actor)
             throw new errors_1.UnauthorizedError();
-        return { usuario: S.toSessionUser(req.actor), csrfToken: this.csrf.ensureToken(req), expiraPorInactividadEnSegundos: Math.round(this.config.session.idleMs / 1000) };
+        return {
+            usuario: S.toSessionUser(req.actor),
+            csrfToken: this.csrf.ensureToken(req),
+            expiraPorInactividadEnSegundos: Math.round(this.config.session.idleMs / 1000),
+        };
     }
     csrfToken(req) {
         return { data: { csrfToken: this.csrf.ensureToken(req) } };

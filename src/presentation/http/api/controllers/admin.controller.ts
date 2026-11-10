@@ -226,7 +226,8 @@ export class AdminController {
     tags: ['Sistema'],
     auth: 'system.read',
     summary: 'Métricas operativas de esta instancia',
-    description: 'Latencia y errores por ruta (ventana deslizante), conexiones del pool de PostgreSQL, memoria, CPU, caché y cola de estadísticas. Sin datos personales.',
+    description:
+      'Latencia y errores por ruta (ventana deslizante), conexiones del pool de PostgreSQL, memoria, CPU, caché y cola de estadísticas. Sin datos personales.',
     response: { description: 'Métricas', schema: S.SystemMetrics },
   })
   async systemMetrics() {

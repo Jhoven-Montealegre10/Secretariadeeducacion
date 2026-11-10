@@ -53,7 +53,11 @@ function normalizeError(err) {
     }
     const code = (0, db_service_1.pgCode)(err);
     const message = String(e?.message ?? '');
-    if (code === db_service_1.PG.QUERY_CANCELED || code === db_service_1.PG.LOCK_TIMEOUT || code === db_service_1.PG.DEADLOCK || code === db_service_1.PG.SERIALIZATION_FAILURE || /timeout exceeded when trying to connect/i.test(message)) {
+    if (code === db_service_1.PG.QUERY_CANCELED ||
+        code === db_service_1.PG.LOCK_TIMEOUT ||
+        code === db_service_1.PG.DEADLOCK ||
+        code === db_service_1.PG.SERIALIZATION_FAILURE ||
+        /timeout exceeded when trying to connect/i.test(message)) {
         return Object.assign(new errors_1.AppError('El servicio está ocupado. Intente de nuevo en unos segundos.', { status: 503, code: 'SERVICE_BUSY' }), { cause: err });
     }
     return Object.assign(new errors_1.AppError('Ocurrió un error inesperado. Intente de nuevo más tarde.', { status: 500, code: 'INTERNAL_ERROR' }), { cause: err });
@@ -96,7 +100,9 @@ let ErrorFilter = class ErrorFilter {
             res.setHeader('Retry-After', String(rate.resetSeconds));
         const wantsJson = req.path.startsWith('/api/') || req.accepts(['html', 'json']) === 'json';
         if (wantsJson) {
-            res.status(err.status).json({ error: { code: err.code, message: err.message, ...(err.details !== undefined ? { details: err.details } : {}), requestId: req.id } });
+            res
+                .status(err.status)
+                .json({ error: { code: err.code, message: err.message, ...(err.details !== undefined ? { details: err.details } : {}), requestId: req.id } });
             return;
         }
         res.status(err.status).render('errors/error', {

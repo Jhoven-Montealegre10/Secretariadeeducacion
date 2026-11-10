@@ -21,7 +21,10 @@ exports.MfaVerifyBody = common_1.z
 exports.MfaEnableBody = common_1.z.strictObject({ codigo: Totp });
 exports.ReauthBody = common_1.z.strictObject({ password: Password, codigo: Totp });
 exports.RecoveryRequestBody = common_1.z.strictObject({ email: Email });
-exports.ResetBody = common_1.z.strictObject({ token: common_1.z.string().min(20).max(200).meta({ example: 'token-ficticio-de-ejemplo-0000000000' }), password: NewPassword });
+exports.ResetBody = common_1.z.strictObject({
+    token: common_1.z.string().min(20).max(200).meta({ example: 'token-ficticio-de-ejemplo-0000000000' }),
+    password: NewPassword,
+});
 exports.ChangePasswordBody = common_1.z.strictObject({ actual: Password, nueva: NewPassword });
 exports.ProfileBody = common_1.z.strictObject({ nombre: common_1.z.string().trim().min(3).max(120).meta({ example: 'Ana Gómez' }) });
 exports.LoginStep = (0, common_1.single)('PasoLogin', common_1.z.strictObject({
@@ -45,7 +48,9 @@ exports.MfaSetup = (0, common_1.single)('ConfiguracionMfa', common_1.z.strictObj
     secretoManual: common_1.z.string().meta({ example: 'EJEMPLOFICTICIO234', description: 'Para escribir a mano en la aplicación si no puede escanear.' }),
 }));
 exports.RecoveryCodes = (0, common_1.single)('CodigosRecuperacion', common_1.z.strictObject({
-    codigosRecuperacion: common_1.z.array(common_1.z.string()).meta({ example: ['ABCDE-FGHJK', 'LMNPQ-RSTUV'], description: 'Se muestran UNA sola vez. Guárdelos en un lugar seguro.' }),
+    codigosRecuperacion: common_1.z
+        .array(common_1.z.string())
+        .meta({ example: ['ABCDE-FGHJK', 'LMNPQ-RSTUV'], description: 'Se muestran UNA sola vez. Guárdelos en un lugar seguro.' }),
     csrfToken: common_1.z.string().optional(),
 }));
 exports.MfaResult = (0, common_1.single)('ResultadoMfa', common_1.z.strictObject({ usuario: exports.SessionUser, csrfToken: common_1.z.string(), codigosRestantes: common_1.z.number().int() }));

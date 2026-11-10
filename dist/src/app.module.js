@@ -133,7 +133,18 @@ exports.HttpModule = HttpModule;
 exports.HttpModule = HttpModule = __decorate([
     (0, common_1.Module)({
         imports: [IdentityModule, ContentModule, CitizenModule],
-        controllers: [health_controller_1.HealthController, docs_controller_1.DocsController, auth_controller_1.AuthController, admin_controller_1.AdminController, content_controller_1.ContentController, public_controller_1.PublicController, pqrsd_web_controller_1.PqrsdWebController, site_controller_1.SiteController, admin_web_controller_1.AdminWebController, site_controller_1.PageSlugController],
+        controllers: [
+            health_controller_1.HealthController,
+            docs_controller_1.DocsController,
+            auth_controller_1.AuthController,
+            admin_controller_1.AdminController,
+            content_controller_1.ContentController,
+            public_controller_1.PublicController,
+            pqrsd_web_controller_1.PqrsdWebController,
+            site_controller_1.SiteController,
+            admin_web_controller_1.AdminWebController,
+            site_controller_1.PageSlugController,
+        ],
         providers: [
             csrf_service_1.CsrfService,
             rate_limiter_service_1.RateLimiter,

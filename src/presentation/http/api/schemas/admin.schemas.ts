@@ -168,7 +168,14 @@ export const StatsReport = single(
 export const StatsQuery = z.object({ desde: Fecha.optional().meta({ example: '2026-10-01' }), hasta: Fecha.optional().meta({ example: '2026-10-31' }) });
 
 // --- Sistema ---
-const Latency = z.strictObject({ solicitudes: z.number().int(), errores5xx: z.number().int(), p50Ms: z.number(), p95Ms: z.number(), p99Ms: z.number(), maxMs: z.number() });
+const Latency = z.strictObject({
+  solicitudes: z.number().int(),
+  errores5xx: z.number().int(),
+  p50Ms: z.number(),
+  p95Ms: z.number(),
+  p99Ms: z.number(),
+  maxMs: z.number(),
+});
 export const SystemMetrics = single(
   'MetricasSistema',
   z.strictObject({
@@ -180,7 +187,13 @@ export const SystemMetrics = single(
     memoria: z.strictObject({ rssMb: z.number(), heapUsadoMb: z.number(), heapTotalMb: z.number() }),
     cpu: z.strictObject({ usuarioMs: z.number(), sistemaMs: z.number() }),
     eventLoopRetrasoP99Ms: z.number(),
-    baseDeDatos: z.strictObject({ poolMaximo: z.number().int(), conexiones: z.number().int(), libres: z.number().int(), enEspera: z.number().int(), conexionesServidor: z.number().int().nullable() }),
+    baseDeDatos: z.strictObject({
+      poolMaximo: z.number().int(),
+      conexiones: z.number().int(),
+      libres: z.number().int(),
+      enEspera: z.number().int(),
+      conexionesServidor: z.number().int().nullable(),
+    }),
     cache: z.strictObject({ entradas: z.number().int(), aciertos: z.number().int(), fallos: z.number().int(), escuchandoInvalidaciones: z.boolean() }),
     estadisticas: z.strictObject({ pendientes: z.number().int(), descartadas: z.number().int() }),
     http: z.strictObject({ ventanaMinutos: z.number().int(), total: Latency, porRuta: z.array(Latency.extend({ ruta: z.string() })) }),

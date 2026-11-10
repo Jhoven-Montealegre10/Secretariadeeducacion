@@ -99,7 +99,7 @@ export class PublicCache implements OnModuleInit, OnModuleDestroy {
   private store(key: string, value: unknown): void {
     this.entries.set(key, { value, expires: Date.now() + this.config.cache.ttlSeconds * 1000 });
     while (this.entries.size > this.config.cache.maxEntries) {
-      const oldest = this.entries.keys().next().value as string | undefined;
+      const oldest = this.entries.keys().next().value;
       if (oldest === undefined) break;
       this.entries.delete(oldest);
     }

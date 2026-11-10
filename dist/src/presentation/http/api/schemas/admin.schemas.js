@@ -150,7 +150,14 @@ exports.StatsReport = (0, common_1.single)('ReporteEstadisticas', common_1.z.str
 }));
 exports.StatsQuery = common_1.z.object({ desde: common_1.Fecha.optional().meta({ example: '2026-10-01' }), hasta: common_1.Fecha.optional().meta({ example: '2026-10-31' }) });
 // --- Sistema ---
-const Latency = common_1.z.strictObject({ solicitudes: common_1.z.number().int(), errores5xx: common_1.z.number().int(), p50Ms: common_1.z.number(), p95Ms: common_1.z.number(), p99Ms: common_1.z.number(), maxMs: common_1.z.number() });
+const Latency = common_1.z.strictObject({
+    solicitudes: common_1.z.number().int(),
+    errores5xx: common_1.z.number().int(),
+    p50Ms: common_1.z.number(),
+    p95Ms: common_1.z.number(),
+    p99Ms: common_1.z.number(),
+    maxMs: common_1.z.number(),
+});
 exports.SystemMetrics = (0, common_1.single)('MetricasSistema', common_1.z.strictObject({
     instancia: common_1.z.string(),
     version: common_1.z.string(),
@@ -160,7 +167,13 @@ exports.SystemMetrics = (0, common_1.single)('MetricasSistema', common_1.z.stric
     memoria: common_1.z.strictObject({ rssMb: common_1.z.number(), heapUsadoMb: common_1.z.number(), heapTotalMb: common_1.z.number() }),
     cpu: common_1.z.strictObject({ usuarioMs: common_1.z.number(), sistemaMs: common_1.z.number() }),
     eventLoopRetrasoP99Ms: common_1.z.number(),
-    baseDeDatos: common_1.z.strictObject({ poolMaximo: common_1.z.number().int(), conexiones: common_1.z.number().int(), libres: common_1.z.number().int(), enEspera: common_1.z.number().int(), conexionesServidor: common_1.z.number().int().nullable() }),
+    baseDeDatos: common_1.z.strictObject({
+        poolMaximo: common_1.z.number().int(),
+        conexiones: common_1.z.number().int(),
+        libres: common_1.z.number().int(),
+        enEspera: common_1.z.number().int(),
+        conexionesServidor: common_1.z.number().int().nullable(),
+    }),
     cache: common_1.z.strictObject({ entradas: common_1.z.number().int(), aciertos: common_1.z.number().int(), fallos: common_1.z.number().int(), escuchandoInvalidaciones: common_1.z.boolean() }),
     estadisticas: common_1.z.strictObject({ pendientes: common_1.z.number().int(), descartadas: common_1.z.number().int() }),
     http: common_1.z.strictObject({ ventanaMinutos: common_1.z.number().int(), total: Latency, porRuta: common_1.z.array(Latency.extend({ ruta: common_1.z.string() })) }),

@@ -24,7 +24,7 @@ export function detectMedia(buffer: Buffer, originalName: string): DetectedMedia
   if (!Buffer.isBuffer(buffer) || buffer.length < 12) return null;
   const format = FORMATS.find((f) => f.test(buffer));
   if (!format || !format.ext.includes(extensionOf(originalName))) return null;
-  return { tipo: format.tipo, mime: format.mime, extension: format.ext[0]! };
+  return { tipo: format.tipo, mime: format.mime, extension: format.ext[0] };
 }
 
 export function isPdf(buffer: Buffer, originalName: string): boolean {

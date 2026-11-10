@@ -55,7 +55,12 @@ function objectProperties(schema) {
     if (!schema)
         return [];
     const json = (0, openapi_1.toOpenApi)(schema, 'input');
-    return Object.entries(json.properties ?? {}).map(([name, s]) => ({ name, schema: s, required: (json.required ?? []).includes(name), description: s.description }));
+    return Object.entries(json.properties ?? {}).map(([name, s]) => ({
+        name,
+        schema: s,
+        required: (json.required ?? []).includes(name),
+        description: s.description,
+    }));
 }
 function decorate(kind, method, path, input) {
     const spec = { ...input, kind, method, path };
@@ -63,7 +68,13 @@ function decorate(kind, method, path, input) {
     const register = (target, key) => {
         exports.ROUTES.push({ ...spec, operationId: `${target.constructor.name}_${String(key)}` });
     };
-    const METHODS = { get: common_1.RequestMethod.GET, post: common_1.RequestMethod.POST, put: common_1.RequestMethod.PUT, patch: common_1.RequestMethod.PATCH, delete: common_1.RequestMethod.DELETE };
+    const METHODS = {
+        get: common_1.RequestMethod.GET,
+        post: common_1.RequestMethod.POST,
+        put: common_1.RequestMethod.PUT,
+        patch: common_1.RequestMethod.PATCH,
+        delete: common_1.RequestMethod.DELETE,
+    };
     // La ruta se declara UNA vez (formato OpenAPI {param}) y se registra en Nest como :param.
     const nestPath = path.replace(/\{(\w+)\}/g, ':$1');
     const decorators = [
@@ -76,7 +87,12 @@ function decorate(kind, method, path, input) {
         decorators.push((0, swagger_1.ApiExcludeEndpoint)());
         return (0, common_1.applyDecorators)(...decorators);
     }
-    decorators.push((0, swagger_1.ApiTags)(...(spec.tags ?? [])), (0, swagger_1.ApiOperation)({ summary: spec.summary, description: [spec.description, describeAuth(spec.auth), (0, exports.needsCsrf)(spec) ? '**CSRF:** requiere la cabecera `X-CSRF-Token`.' : ''].filter(Boolean).join('\n\n') }));
+    decorators.push((0, swagger_1.ApiTags)(...(spec.tags ?? [])), (0, swagger_1.ApiOperation)({
+        summary: spec.summary,
+        description: [spec.description, describeAuth(spec.auth), (0, exports.needsCsrf)(spec) ? '**CSRF:** requiere la cabecera `X-CSRF-Token`.' : '']
+            .filter(Boolean)
+            .join('\n\n'),
+    }));
     if (typeof spec.auth === 'string' && spec.auth.includes('.'))
         decorators.push((0, swagger_1.ApiExtension)('x-permiso', spec.auth));
     for (const p of objectProperties(spec.request?.params))

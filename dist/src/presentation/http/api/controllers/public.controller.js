@@ -108,7 +108,15 @@ let PublicController = class PublicController {
         const p = await this.pages.getPublished((0, session_helpers_1.valid)(req, 'params', P.SlugParams).slug);
         if (!p)
             throw new errors_1.NotFoundError('La página no existe.');
-        return { data: { slug: p.slug, titulo: p.titulo, resumen: p.resumen, bloques: p.bloques, medios: (await this.media.findByIds((0, content_1.mediosEnBloques)(p.bloques))).map(P.toPublicMedia) } };
+        return {
+            data: {
+                slug: p.slug,
+                titulo: p.titulo,
+                resumen: p.resumen,
+                bloques: p.bloques,
+                medios: (await this.media.findByIds((0, content_1.mediosEnBloques)(p.bloques))).map(P.toPublicMedia),
+            },
+        };
     }
     async getSlider(req) {
         const s = await this.sliders.getPublic((0, session_helpers_1.valid)(req, 'params', P.LocationParams).ubicacion);
@@ -117,7 +125,13 @@ let PublicController = class PublicController {
         return {
             data: {
                 ubicacion: s.ubicacion,
-                diapositivas: s.diapositivas.map((d) => ({ titulo: d.titulo, texto: d.texto, enlace: d.enlace, textoEnlace: d.textoEnlace, imagen: P.toImage(d.medio) })),
+                diapositivas: s.diapositivas.map((d) => ({
+                    titulo: d.titulo,
+                    texto: d.texto,
+                    enlace: d.enlace,
+                    textoEnlace: d.textoEnlace,
+                    imagen: P.toImage(d.medio),
+                })),
             },
         };
     }

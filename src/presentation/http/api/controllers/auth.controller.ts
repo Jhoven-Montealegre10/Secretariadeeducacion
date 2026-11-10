@@ -49,7 +49,11 @@ export class AuthController {
 
   private sessionData(req: AppRequest) {
     if (!req.actor) throw new UnauthorizedError();
-    return { usuario: S.toSessionUser(req.actor), csrfToken: this.csrf.ensureToken(req), expiraPorInactividadEnSegundos: Math.round(this.config.session.idleMs / 1000) };
+    return {
+      usuario: S.toSessionUser(req.actor),
+      csrfToken: this.csrf.ensureToken(req),
+      expiraPorInactividadEnSegundos: Math.round(this.config.session.idleMs / 1000),
+    };
   }
 
   @Endpoint('get', '/api/v1/auth/csrf', {

@@ -36,7 +36,12 @@ exports.Media = (0, openapi_1.named)('Medio', common_1.z.strictObject({
     totalUsos: common_1.z.number().int(),
     url: common_1.z.string().meta({ description: 'URL de acceso desde el panel (autenticada).', example: '/api/v1/medios/31/archivo' }),
     miniaturaUrl: common_1.z.string().nullable(),
-    urlPublica: common_1.z.string().meta({ description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.', example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg' }),
+    urlPublica: common_1.z
+        .string()
+        .meta({
+        description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.',
+        example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg',
+    }),
     creadoEn: common_1.FechaHora,
     actualizadoEn: common_1.FechaHora,
     version: common_1.VersionOutput,
@@ -68,7 +73,11 @@ exports.MediaUploadForm = common_1.z.object({
     visibilidad: common_1.z.enum(['publica', 'privada']).optional(),
 });
 exports.MediaUploadFields = exports.MediaUploadForm.omit({ archivos: true }).strict();
-exports.MediaReplaceForm = common_1.z.object({ archivo: common_1.z.string().meta({ format: 'binary' }), confirmar: common_1.z.enum(['true', 'false']).optional(), version: common_1.z.string().optional() });
+exports.MediaReplaceForm = common_1.z.object({
+    archivo: common_1.z.string().meta({ format: 'binary' }),
+    confirmar: common_1.z.enum(['true', 'false']).optional(),
+    version: common_1.z.string().optional(),
+});
 exports.MediaReplaceFields = common_1.z.strictObject({ confirmar: common_1.BoolString.optional(), version: common_1.z.coerce.number().int().min(1).optional() });
 exports.ConfirmQuery = common_1.z.object({
     confirmar: common_1.z
@@ -283,7 +292,9 @@ exports.SlideUpdate = common_1.z
 })
     .refine(atLeastOne, AT_LEAST_ONE);
 exports.SlideParams = common_1.z.object({ id: common_1.Id, diapositivaId: common_1.Id });
-exports.VersionQuery = common_1.z.object({ version: common_1.z.coerce.number().int().min(1).optional().meta({ description: 'Versión del slider que se editó (bloqueo optimista).' }) });
+exports.VersionQuery = common_1.z.object({
+    version: common_1.z.coerce.number().int().min(1).optional().meta({ description: 'Versión del slider que se editó (bloqueo optimista).' }),
+});
 exports.ReorderBody = common_1.z.strictObject({
     orden: common_1.z
         .array(common_1.Id)
@@ -390,7 +401,15 @@ exports.PqrsdList = (0, common_1.paginated)('ListaPqrsd', PqrsdItem);
 exports.PqrsdOne = (0, common_1.single)('PqrsdRespuesta', exports.Pqrsd);
 exports.PqrsdQuery = (0, common_1.listQuery)([], { estado: EstadoPqrsd.optional() }).omit({ sort: true, q: true });
 exports.PqrsdRespond = common_1.z.strictObject({ estado: EstadoPqrsd, respuesta: common_1.z.string().trim().max(10000).default('') });
-const toPqrsdItem = (d) => ({ id: d.id, radicado: d.radicado, tipo: d.tipo, estado: d.estado, nombre: d.nombre, asunto: d.asunto, creadoEn: d.creadoEn });
+const toPqrsdItem = (d) => ({
+    id: d.id,
+    radicado: d.radicado,
+    tipo: d.tipo,
+    estado: d.estado,
+    nombre: d.nombre,
+    asunto: d.asunto,
+    creadoEn: d.creadoEn,
+});
 exports.toPqrsdItem = toPqrsdItem;
 const toPqrsd = (d) => ({
     ...(0, exports.toPqrsdItem)(d),

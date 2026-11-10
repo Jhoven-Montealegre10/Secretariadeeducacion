@@ -2,7 +2,15 @@
 import { CATEGORIAS } from '../../../../application/content.services';
 import { ESTADOS_PQRSD, TIPOS_DOCUMENTO_NORMATIVO } from '../../../../application/citizen.services';
 import { bloqueSchema, esEnlaceSeguro, SLUG_RE, UBICACION_RE } from '../../../../domain/content';
-import type { DocumentRecord, MediaRecord, MediaUsage, NewsRecord, PageRecord, SlideRecord, SliderRecord } from '../../../../infrastructure/repositories/content.repositories';
+import type {
+  DocumentRecord,
+  MediaRecord,
+  MediaUsage,
+  NewsRecord,
+  PageRecord,
+  SlideRecord,
+  SliderRecord,
+} from '../../../../infrastructure/repositories/content.repositories';
 import type { PqrsdRecord } from '../../../../infrastructure/repositories/citizen.repositories';
 import { ALLOWED_MEDIA } from '../../../../infrastructure/storage/file-type-detector';
 import { named } from '../openapi';
@@ -37,7 +45,12 @@ export const Media = named(
     totalUsos: z.number().int(),
     url: z.string().meta({ description: 'URL de acceso desde el panel (autenticada).', example: '/api/v1/medios/31/archivo' }),
     miniaturaUrl: z.string().nullable(),
-    urlPublica: z.string().meta({ description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.', example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg' }),
+    urlPublica: z
+      .string()
+      .meta({
+        description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.',
+        example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg',
+      }),
     creadoEn: FechaHora,
     actualizadoEn: FechaHora,
     version: VersionOutput,
@@ -70,7 +83,11 @@ export const MediaUploadForm = z.object({
   visibilidad: z.enum(['publica', 'privada']).optional(),
 });
 export const MediaUploadFields = MediaUploadForm.omit({ archivos: true }).strict();
-export const MediaReplaceForm = z.object({ archivo: z.string().meta({ format: 'binary' }), confirmar: z.enum(['true', 'false']).optional(), version: z.string().optional() });
+export const MediaReplaceForm = z.object({
+  archivo: z.string().meta({ format: 'binary' }),
+  confirmar: z.enum(['true', 'false']).optional(),
+  version: z.string().optional(),
+});
 export const MediaReplaceFields = z.strictObject({ confirmar: BoolString.optional(), version: z.coerce.number().int().min(1).optional() });
 export const ConfirmQuery = z.object({
   confirmar: z
@@ -109,7 +126,10 @@ export const toMedia = (m: MediaRecord & { usos?: MediaUsage[] }) => ({
 });
 
 // --- Páginas ---
-export const Bloque = named('Bloque', z.lazy(() => bloqueSchema).meta({ description: 'Bloque de contenido. El HTML de los bloques de texto se sanitiza en el servidor (lista blanca).' }));
+export const Bloque = named(
+  'Bloque',
+  z.lazy(() => bloqueSchema).meta({ description: 'Bloque de contenido. El HTML de los bloques de texto se sanitiza en el servidor (lista blanca).' }),
+);
 const PageSummary = z.strictObject({
   id: z.number().int(),
   slug: z.string().meta({ example: 'secretaria' }),
@@ -290,7 +310,9 @@ export const SlideUpdate = z
   })
   .refine(atLeastOne, AT_LEAST_ONE);
 export const SlideParams = z.object({ id: Id, diapositivaId: Id });
-export const VersionQuery = z.object({ version: z.coerce.number().int().min(1).optional().meta({ description: 'Versión del slider que se editó (bloqueo optimista).' }) });
+export const VersionQuery = z.object({
+  version: z.coerce.number().int().min(1).optional().meta({ description: 'Versión del slider que se editó (bloqueo optimista).' }),
+});
 export const ReorderBody = z.strictObject({
   orden: z
     .array(Id)
@@ -402,7 +424,15 @@ export const PqrsdList = paginated('ListaPqrsd', PqrsdItem);
 export const PqrsdOne = single('PqrsdRespuesta', Pqrsd);
 export const PqrsdQuery = listQuery([], { estado: EstadoPqrsd.optional() }).omit({ sort: true, q: true });
 export const PqrsdRespond = z.strictObject({ estado: EstadoPqrsd, respuesta: z.string().trim().max(10000).default('') });
-export const toPqrsdItem = (d: PqrsdRecord) => ({ id: d.id, radicado: d.radicado, tipo: d.tipo, estado: d.estado, nombre: d.nombre, asunto: d.asunto, creadoEn: d.creadoEn });
+export const toPqrsdItem = (d: PqrsdRecord) => ({
+  id: d.id,
+  radicado: d.radicado,
+  tipo: d.tipo,
+  estado: d.estado,
+  nombre: d.nombre,
+  asunto: d.asunto,
+  creadoEn: d.creadoEn,
+});
 export const toPqrsd = (d: PqrsdRecord) => ({
   ...toPqrsdItem(d),
   tipoDocumento: d.tipoDocumento,

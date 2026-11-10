@@ -12,7 +12,12 @@ export const Fecha = z
 export const FechaHora = z.string().meta({ example: '2026-11-10 14:32:05', description: 'Fecha y hora UTC' });
 export const Estado = z.enum(['borrador', 'publicada']).meta({ example: 'publicada' });
 /** Versión para el bloqueo optimista (opcional por compatibilidad con clientes anteriores). */
-export const VersionInput = z.number().int().min(1).optional().meta({ description: 'Versión que se editó. Si otra persona guardó antes, responde 409 EDIT_CONFLICT.', example: 3 });
+export const VersionInput = z
+  .number()
+  .int()
+  .min(1)
+  .optional()
+  .meta({ description: 'Versión que se editó. Si otra persona guardó antes, responde 409 EDIT_CONFLICT.', example: 3 });
 export const VersionOutput = z.number().int().meta({ description: 'Versión actual (envíela al guardar).', example: 3 });
 
 /** Parámetros de paginación con límites máximos y orden por lista blanca. */

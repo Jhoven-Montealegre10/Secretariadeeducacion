@@ -97,9 +97,15 @@ export class PqrsdWebController {
   async lookup(@Req() req: AppRequest, @Res() res: Response) {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const parsed = lookupSchema.safeParse(body);
-    if (!parsed.success) return this.render(res, { consulta: { radicado: String(body.radicado ?? '').slice(0, 20) }, consultaErrors: details(parsed.error) }, 422);
+    if (!parsed.success)
+      return this.render(res, { consulta: { radicado: String(body.radicado ?? '').slice(0, 20) }, consultaErrors: details(parsed.error) }, 422);
     const resultado = await this.pqrsd.lookup(parsed.data.radicado, parsed.data.documento);
-    if (!resultado) return this.render(res, { consulta: { radicado: parsed.data.radicado }, consultaErrors: { general: 'No encontramos una solicitud con esos datos.' } }, 404);
+    if (!resultado)
+      return this.render(
+        res,
+        { consulta: { radicado: parsed.data.radicado }, consultaErrors: { general: 'No encontramos una solicitud con esos datos.' } },
+        404,
+      );
     this.render(res, { resultado });
   }
 }

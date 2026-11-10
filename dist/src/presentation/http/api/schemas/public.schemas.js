@@ -48,7 +48,7 @@ exports.PublicSlider = (0, common_1.single)('SliderPublico', common_1.z.strictOb
 exports.PublicInstitutions = (0, common_1.single)('Instituciones', common_1.z.array(common_1.z.strictObject({ nombre: common_1.z.string(), zona: common_1.z.enum(['Urbana', 'Rural']) })));
 exports.SlugParams = common_1.z.object({ slug: common_1.z.string().max(90).meta({ example: 'secretaria' }) });
 exports.LocationParams = common_1.z.object({ ubicacion: common_1.z.string().max(90).meta({ example: 'inicio' }) });
-const toImage = (m) => (m ? { url: (0, content_schemas_1.mediaUrl)(m), textoAlternativo: m.textoAlternativo, ancho: m.ancho ?? null, alto: m.alto ?? null } : null);
+const toImage = (m) => m ? { url: (0, content_schemas_1.mediaUrl)(m), textoAlternativo: m.textoAlternativo, ancho: m.ancho ?? null, alto: m.alto ?? null } : null;
 exports.toImage = toImage;
 const toPublicMedia = (m) => ({
     id: m.id,

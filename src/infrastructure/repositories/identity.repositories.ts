@@ -437,7 +437,7 @@ export class AuditRepository {
           creadoEn: r.creado_en as string,
         };
         if (r.hash_anterior !== previous || this.crypto.auditChainHash(previous, row) !== r.hash) return { idAlterado: Number(r.id) };
-        previous = r.hash as string;
+        previous = r.hash;
         lastId = Number(r.id);
       }
     }

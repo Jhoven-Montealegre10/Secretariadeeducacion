@@ -12,11 +12,13 @@ import type { AppRequest } from '../http.types';
 export const sessionCookieName = (isProd: boolean) => (isProd ? '__Host-sem.sid' : 'sem.sid');
 
 export function regenerate(req: AppRequest): Promise<void> {
-  return new Promise((resolve, reject) => req.session.regenerate((err: unknown) => (err ? reject(err) : resolve())));
+  return new Promise((resolve, reject) =>
+    req.session.regenerate((err: unknown) => (err ? reject(err instanceof Error ? err : new Error(String(err))) : resolve())),
+  );
 }
 
 export function save(req: AppRequest): Promise<void> {
-  return new Promise((resolve, reject) => req.session.save((err: unknown) => (err ? reject(err) : resolve())));
+  return new Promise((resolve, reject) => req.session.save((err: unknown) => (err ? reject(err instanceof Error ? err : new Error(String(err))) : resolve())));
 }
 
 export function destroy(req: AppRequest, res: Response, isProd: boolean): Promise<void> {

@@ -55,7 +55,7 @@ export function catalogo() {
   return Object.entries(MODULOS).map(([modulo, def]) => ({
     modulo,
     nombre: def.nombre,
-    acciones: Object.entries(def.acciones).map(([accion, descripcion]) => ({ permiso: `${modulo}.${accion}`, descripcion: descripcion as string })),
+    acciones: Object.entries(def.acciones).map(([accion, descripcion]) => ({ permiso: `${modulo}.${accion}`, descripcion: descripcion })),
   }));
 }
 

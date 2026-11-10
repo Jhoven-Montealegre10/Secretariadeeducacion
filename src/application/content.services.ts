@@ -104,7 +104,7 @@ export class PageService {
         'Los bloques de la página no son válidos.',
         parsed.error.issues.map((i) => ({ campo: `bloques.${i.path.join('.')}`, mensaje: i.message })),
       );
-    const clean = this.sanitizeBlocks(parsed.data as Bloques);
+    const clean = this.sanitizeBlocks(parsed.data);
     const imagenes = clean
       .filter((b) => b.tipo === 'imagen' || b.tipo === 'galeria')
       .flatMap((b) => (b.medioId ? [b.medioId as number] : ((b.medios as number[]) ?? [])));

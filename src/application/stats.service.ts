@@ -34,7 +34,7 @@ export function device(ua: string): 'tablet' | 'movil' | 'escritorio' | 'otro' {
 
 export function source(referer: string, host: string, hasCampaign: boolean): { fuente: string; dominio: string | null } {
   if (hasCampaign) return { fuente: 'campana', dominio: null };
-  let refHost = '';
+  let refHost: string;
   try {
     refHost = referer ? new URL(referer).hostname.toLowerCase() : '';
   } catch {

@@ -13,7 +13,10 @@ export function validarPassword(password: unknown, evaluar: StrengthEvaluator, d
   const value = String(password ?? '');
   if (value.length < PASSWORD_MIN) return `La contraseña debe tener al menos ${PASSWORD_MIN} caracteres.`;
   if (value.length > PASSWORD_MAX) return `La contraseña admite máximo ${PASSWORD_MAX} caracteres.`;
-  const { score } = evaluar(value, datosUsuario.filter((d): d is string => !!d));
+  const { score } = evaluar(
+    value,
+    datosUsuario.filter((d): d is string => !!d),
+  );
   if (score < MIN_SCORE) return 'La contraseña es demasiado común o fácil de adivinar. Use una frase larga con palabras poco relacionadas.';
   return null;
 }

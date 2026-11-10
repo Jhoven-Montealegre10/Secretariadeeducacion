@@ -50,7 +50,8 @@ export class ApiInterceptor implements NestInterceptor {
     }
     const declared = Number(req.get('content-length') ?? 0);
     if (spec.upload) await this.receiveFiles(spec.upload, req, res);
-    else if (spec.kind === 'api' && declared > (spec.bodyLimit ?? DEFAULT_BODY_LIMIT)) throw new PayloadTooLargeError('La solicitud supera el tamaño permitido.');
+    else if (spec.kind === 'api' && declared > (spec.bodyLimit ?? DEFAULT_BODY_LIMIT))
+      throw new PayloadTooLargeError('La solicitud supera el tamaño permitido.');
 
     const valid: AppRequest['valid'] = {};
     for (const part of ['params', 'query', 'body'] as const) {
@@ -71,14 +72,18 @@ export class ApiInterceptor implements NestInterceptor {
       return Promise.reject(new PayloadTooLargeError(`La carga supera el máximo de ${Math.round(maxRequest / 1048576)} MB por envío.`));
     }
     const maxBytes = upload.maxBytes(this.config);
-    const m = multer({ storage: multer.memoryStorage(), limits: { fileSize: maxBytes, files: upload.maxFiles, fields: 20, fieldSize: 20 * 1024, parts: upload.maxFiles + 20 } });
+    const m = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: maxBytes, files: upload.maxFiles, fields: 20, fieldSize: 20 * 1024, parts: upload.maxFiles + 20 },
+    });
     const handler = upload.maxFiles > 1 ? m.array(upload.field, upload.maxFiles) : m.single(upload.field);
     return new Promise((resolve, reject) => {
       handler(req, res, (err?: unknown) => {
         if (!err) return resolve();
         const code = (err as { code?: string }).code;
         if (code === 'LIMIT_FILE_SIZE') return reject(new PayloadTooLargeError(`El archivo supera el máximo de ${Math.round(maxBytes / 1048576)} MB.`));
-        if (code === 'LIMIT_FILE_COUNT' || code === 'LIMIT_UNEXPECTED_FILE') return reject(new ValidationError(`Máximo ${upload.maxFiles} archivo(s) en el campo "${upload.field}".`));
+        if (code === 'LIMIT_FILE_COUNT' || code === 'LIMIT_UNEXPECTED_FILE')
+          return reject(new ValidationError(`Máximo ${upload.maxFiles} archivo(s) en el campo "${upload.field}".`));
         return reject(new ValidationError('La carga del archivo no es válida.'));
       });
     });
@@ -95,7 +100,8 @@ export class ApiInterceptor implements NestInterceptor {
     const body = r.meta ? { data: r.data, meta: r.meta } : { data: r.data };
     if (!this.config.isProd && spec.response?.schema) {
       const check = spec.response.schema.safeParse(body);
-      if (!check.success) throw new Error(`Respuesta fuera de contrato en ${spec.method.toUpperCase()} ${spec.path}: ${JSON.stringify(check.error.issues.slice(0, 3))}`);
+      if (!check.success)
+        throw new Error(`Respuesta fuera de contrato en ${spec.method.toUpperCase()} ${spec.path}: ${JSON.stringify(check.error.issues.slice(0, 3))}`);
     }
     return body;
   }
