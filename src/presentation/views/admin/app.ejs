@@ -1,0 +1,27 @@
+<%- include('_head') %>
+<body class="admin admin-app">
+  <a class="skip-link" href="#vista">Saltar al contenido principal</a>
+  <div class="govco-bar">
+    <div class="container admin-topbar">
+      <a class="govco-logo" href="https://www.gov.co/" target="_blank" rel="noopener"><span class="govco-mark" aria-hidden="true">CO</span> GOV.CO</a>
+      <div class="govco-bar__tools">
+        <span class="hide-sm" id="usuario-actual"></span>
+        <a href="/" target="_blank" rel="noopener">Ver sitio ↗</a>
+        <button type="button" id="btn-salir">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+  <div class="admin-layout">
+    <button class="admin-menu-toggle" type="button" aria-expanded="false" aria-controls="admin-sidebar">☰ Menú</button>
+    <nav class="admin-sidebar" id="admin-sidebar" aria-label="Menú del panel">
+      <div class="admin-sidebar__brand"><span class="brand__escudo" aria-hidden="true">SEM</span><span>Panel</span></div>
+      <ul id="admin-menu"></ul>
+    </nav>
+    <main class="admin-main" id="vista" tabindex="-1" aria-live="polite">
+      <p class="muted">Cargando…</p>
+    </main>
+  </div>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <script type="module" src="/assets/admin/app.js"></script>
+</body>
+</html>

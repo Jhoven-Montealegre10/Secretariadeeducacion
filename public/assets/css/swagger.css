@@ -1,0 +1,15 @@
+body {
+  margin: 0;
+  background: #fff;
+}
+.docs-bar {
+  background: #3366cc;
+  color: #fff;
+  font:
+    700 1rem system-ui,
+    sans-serif;
+  padding: 14px 20px;
+}
+.swagger-ui .topbar {
+  display: none;
+}

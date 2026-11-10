@@ -1,0 +1,16 @@
+        <% if (!q) { %><div class="notice">Listado parcial. Completar con el directorio oficial de instituciones y sedes.</div><% } %>
+        <form class="filter-box form" action="#instituciones" method="get" role="search">
+          <div>
+            <label for="filtro-ie">Buscar institución</label>
+            <input id="filtro-ie" name="q" type="search" maxlength="80" value="<%= q %>" placeholder="Escriba el nombre o la zona" data-filter-table="tabla-ie">
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table id="tabla-ie">
+            <thead><tr><th scope="col">Institución educativa</th><th scope="col">Zona</th></tr></thead>
+            <tbody>
+              <% instituciones.forEach(function (ie) { %><tr><td><%= ie.nombre %></td><td><%= ie.zona %></td></tr><% }) %>
+              <% if (!instituciones.length) { %><tr><td colspan="2">No se encontraron instituciones.</td></tr><% } %>
+            </tbody>
+          </table>
+        </div>

@@ -1,0 +1,26 @@
+<%# Carrusel accesible: botones con etiqueta, pausa, indicadores y respeto a "reducir movimiento". %>
+<% if (slider && slider.diapositivas.length) { const externo = (url) => /^https?:\/\//i.test(url || ''); %>
+    <section class="slider" aria-roledescription="carrusel" aria-label="Destacados" data-carousel>
+      <div class="slider__track">
+        <% slider.diapositivas.forEach(function (d, i) { %>
+        <div class="slider__slide<%= i === 0 ? ' is-active' : '' %>" role="group" aria-roledescription="diapositiva" aria-label="<%= i + 1 %> de <%= slider.diapositivas.length %>"<% if (i) { %> hidden<% } %>>
+          <img src="<%= mediaSrc(d.medio, { preview: vistaPrevia }) %>" alt="<%= d.medio.textoAlternativo %>"<% if (d.medio.ancho) { %> width="<%= d.medio.ancho %>" height="<%= d.medio.alto %>"<% } %><%= i ? ' loading=lazy' : '' %>>
+          <% if (d.titulo || d.texto || d.enlace) { %>
+          <div class="slider__caption container">
+            <% if (d.titulo) { %><h2><%= d.titulo %></h2><% } %>
+            <% if (d.texto) { %><p><%= d.texto %></p><% } %>
+            <% if (d.enlace) { %><a class="btn btn--white" href="<%= d.enlace %>"<% if (externo(d.enlace)) { %> target="_blank" rel="noopener"<% } %>><%= d.textoEnlace || 'Ver más' %></a><% } %>
+          </div>
+          <% } %>
+        </div>
+        <% }) %>
+      </div>
+      <% if (slider.diapositivas.length > 1) { %>
+      <div class="slider__controls">
+        <button type="button" data-prev aria-label="Diapositiva anterior">‹</button>
+        <button type="button" data-toggle aria-label="Pausar el carrusel">❚❚</button>
+        <button type="button" data-next aria-label="Diapositiva siguiente">›</button>
+      </div>
+      <% } %>
+    </section>
+<% } %>

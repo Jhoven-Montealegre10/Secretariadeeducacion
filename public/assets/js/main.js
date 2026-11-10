@@ -1,99 +1,134 @@
 /* Secretaría de Educación Municipal de Ibagué - interacciones del sitio */
 (function () {
-  "use strict";
+  'use strict';
 
   // ---------- Menú móvil ----------
-  var toggle = document.querySelector(".menu-toggle");
-  var nav = document.querySelector(".main-nav");
+  var toggle = document.querySelector('.menu-toggle');
+  var nav = document.querySelector('.main-nav');
   if (toggle && nav) {
-    toggle.addEventListener("click", function () {
-      var open = nav.classList.toggle("open");
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      toggle.textContent = open ? "✕ Cerrar" : "☰ Menú";
+    toggle.addEventListener('click', function () {
+      var open = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.textContent = open ? '✕ Cerrar' : '☰ Menú';
     });
   }
 
   // ---------- Submenús (clic / teclado) ----------
-  document.querySelectorAll(".has-sub > .nav-btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
+  document.querySelectorAll('.has-sub > .nav-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
       var li = btn.parentElement;
-      var isOpen = li.classList.contains("open");
-      document.querySelectorAll(".has-sub.open").forEach(function (o) {
-        o.classList.remove("open");
-        o.querySelector(".nav-btn").setAttribute("aria-expanded", "false");
+      var isOpen = li.classList.contains('open');
+      document.querySelectorAll('.has-sub.open').forEach(function (o) {
+        o.classList.remove('open');
+        o.querySelector('.nav-btn').setAttribute('aria-expanded', 'false');
       });
       if (!isOpen) {
-        li.classList.add("open");
-        btn.setAttribute("aria-expanded", "true");
+        li.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
       }
     });
   });
-  document.addEventListener("click", function (e) {
-    if (!e.target.closest(".has-sub")) {
-      document.querySelectorAll(".has-sub.open").forEach(function (o) { o.classList.remove("open"); });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.has-sub')) {
+      document.querySelectorAll('.has-sub.open').forEach(function (o) {
+        o.classList.remove('open');
+      });
     }
   });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-      document.querySelectorAll(".has-sub.open").forEach(function (o) { o.classList.remove("open"); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.has-sub.open').forEach(function (o) {
+        o.classList.remove('open');
+      });
     }
   });
 
   // ---------- Accesibilidad: tamaño de letra y contraste ----------
   var size = 100;
-  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-  function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  // Solo preferencias de accesibilidad (tamaño de letra, contraste); nunca datos de sesión.
+  function store(k, v) {
+    try {
+      localStorage.setItem(k, v);
+    } catch (e) {
+      /* almacenamiento no disponible */
+    }
+  }
+  function read(k) {
+    try {
+      return localStorage.getItem(k);
+    } catch (e) {
+      return null;
+    }
+  }
 
-  var savedSize = parseInt(read("sem-font"), 10);
-  if (savedSize) { size = savedSize; document.documentElement.style.fontSize = size + "%"; }
-  if (read("sem-contrast") === "1") document.body.classList.add("high-contrast");
+  var savedSize = parseInt(read('sem-font'), 10);
+  if (savedSize) {
+    size = savedSize;
+    document.documentElement.style.fontSize = size + '%';
+  }
+  if (read('sem-contrast') === '1') document.body.classList.add('high-contrast');
 
-  document.querySelectorAll("[data-font]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var a = b.getAttribute("data-font");
-      size = a === "+" ? Math.min(size + 10, 140) : a === "-" ? Math.max(size - 10, 80) : 100;
-      document.documentElement.style.fontSize = size + "%";
-      store("sem-font", size);
+  document.querySelectorAll('[data-font]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var a = b.getAttribute('data-font');
+      size = a === '+' ? Math.min(size + 10, 140) : a === '-' ? Math.max(size - 10, 80) : 100;
+      document.documentElement.style.fontSize = size + '%';
+      store('sem-font', size);
     });
   });
-  var contrast = document.querySelector("[data-contrast]");
+  var contrast = document.querySelector('[data-contrast]');
   if (contrast) {
-    contrast.addEventListener("click", function () {
-      var on = document.body.classList.toggle("high-contrast");
-      store("sem-contrast", on ? "1" : "0");
+    contrast.addEventListener('click', function () {
+      var on = document.body.classList.toggle('high-contrast');
+      store('sem-contrast', on ? '1' : '0');
     });
   }
 
   // ---------- Botón volver arriba ----------
-  var top = document.querySelector(".to-top");
+  var top = document.querySelector('.to-top');
   if (top) {
-    window.addEventListener("scroll", function () {
-      top.classList.toggle("show", window.scrollY > 500);
-    }, { passive: true });
-    top.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+    window.addEventListener(
+      'scroll',
+      function () {
+        top.classList.toggle('show', window.scrollY > 500);
+      },
+      { passive: true },
+    );
+    top.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   // ---------- Filtro instantáneo de tablas (sin recargar) ----------
-  var norm = function (s) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); };
-  document.querySelectorAll("[data-filter-table]").forEach(function (input) {
-    var table = document.getElementById(input.getAttribute("data-filter-table"));
+  var norm = function (s) {
+    return s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  };
+  document.querySelectorAll('[data-filter-table]').forEach(function (input) {
+    var table = document.getElementById(input.getAttribute('data-filter-table'));
     if (!table) return;
-    var rows = table.querySelectorAll("tbody tr");
-    input.addEventListener("input", function () {
+    var rows = table.querySelectorAll('tbody tr');
+    input.addEventListener('input', function () {
       var q = norm(input.value);
-      rows.forEach(function (r) { r.hidden = norm(r.textContent).indexOf(q) === -1; });
+      rows.forEach(function (r) {
+        r.hidden = norm(r.textContent).indexOf(q) === -1;
+      });
     });
   });
 
   // ---------- Confirmación antes de acciones destructivas ----------
-  document.querySelectorAll("form[data-confirm]").forEach(function (f) {
-    f.addEventListener("submit", function (e) {
-      if (!window.confirm(f.getAttribute("data-confirm"))) e.preventDefault();
+  document.querySelectorAll('form[data-confirm]').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      if (!window.confirm(f.getAttribute('data-confirm'))) e.preventDefault();
     });
   });
 
   // ---------- Envío automático de filtros ----------
-  document.querySelectorAll("[data-autosubmit]").forEach(function (el) {
-    el.addEventListener("change", function () { el.form.submit(); });
+  document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      el.form.submit();
+    });
   });
 })();

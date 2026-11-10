@@ -1,0 +1,111 @@
+<%- include('../partials/header') %>
+<%- include('../partials/page-hero', { heading: 'Atención al ciudadano', intro: 'Estamos para servirle. Elija el canal que le resulte más cómodo.' }) %>
+    <% const err = (k) => errors[k] ? `<p class="field-error" id="e-${k}">${escapeHtml(errors[k])}</p>` : ''; %>
+    <% const inv = (k) => errors[k] ? `aria-invalid="true" aria-describedby="e-${k}"` : ''; %>
+    <section class="section">
+      <div class="container">
+        <h2 class="title-line">Canales de atención</h2>
+        <div class="grid grid--4">
+          <div class="card service"><h3>Presencial</h3><p><%= site.direccion %>.<br><%= site.horario.general.join(' · ') %></p></div>
+          <div class="card service"><h3>Telefónico</h3><p><a href="tel:<%= site.telefonoLink %>"><%= site.telefono %></a></p></div>
+          <div class="card service"><h3>Correo electrónico</h3><p><a href="mailto:<%= site.correo %>"><%= site.correo %></a></p></div>
+          <div class="card service"><h3>Virtual</h3><p>Radique su PQRSD en línea y consulte su estado con el número de radicado.</p><a class="card__link" href="#pqrsd">Radicar ahora</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--alt" id="pqrsd">
+      <div class="container grid grid--2 items-start">
+        <div>
+          <span class="eyebrow">Ley 1755 de 2015</span>
+          <h2 class="title-line">Radicar una PQRSD</h2>
+          <p>Peticiones, quejas, reclamos, sugerencias y denuncias. Al enviar recibirá un <strong>número de radicado</strong> para consultar el estado de su solicitud.</p>
+          <% if (Object.keys(errors).length) { %>
+          <div class="notice notice--error" role="alert">Revise los campos marcados para continuar.</div>
+          <% } %>
+          <form class="form card card__body" method="post" action="/atencion/pqrsd" novalidate>
+            <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+            <div class="hp" aria-hidden="true"><label for="sitio_web">No llenar</label><input id="sitio_web" name="sitio_web" tabindex="-1" autocomplete="off"></div>
+            <div>
+              <label for="tipo">Tipo de solicitud *</label>
+              <select id="tipo" name="tipo" required <%- inv('tipo') %>>
+                <% tipos.forEach(function (t) { %><option <%= form.tipo === t ? 'selected' : '' %>><%= t %></option><% }) %>
+              </select><%- err('tipo') %>
+            </div>
+            <div><label for="nombre">Nombre completo *</label><input id="nombre" name="nombre" required maxlength="120" autocomplete="name" value="<%= form.nombre || '' %>" <%- inv('nombre') %>><%- err('nombre') %></div>
+            <div class="row">
+              <div>
+                <label for="tipo_documento">Tipo de documento *</label>
+                <select id="tipo_documento" name="tipo_documento" required <%- inv('tipoDocumento') %>>
+                  <% tiposDocumento.forEach(function (t) { %><option <%= form.tipo_documento === t ? 'selected' : '' %>><%= t %></option><% }) %>
+                </select><%- err('tipoDocumento') %>
+              </div>
+              <div><label for="documento">Número de documento *</label><input id="documento" name="documento" required maxlength="20" inputmode="numeric" autocomplete="off" <%- inv('documento') %>><%- err('documento') %></div>
+            </div>
+            <div class="row">
+              <div><label for="email">Correo electrónico *</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" value="<%= form.email || '' %>" <%- inv('email') %>><%- err('email') %></div>
+              <div><label for="telefono">Teléfono</label><input id="telefono" name="telefono" type="tel" maxlength="20" autocomplete="tel" value="<%= form.telefono || '' %>" <%- inv('telefono') %>><%- err('telefono') %></div>
+            </div>
+            <div><label for="asunto">Asunto *</label><input id="asunto" name="asunto" required maxlength="150" value="<%= form.asunto || '' %>" <%- inv('asunto') %>><%- err('asunto') %></div>
+            <div><label for="mensaje">Descripción de la solicitud *</label><textarea id="mensaje" name="mensaje" rows="6" required maxlength="5000" <%- inv('mensaje') %>><%= form.mensaje || '' %></textarea><small>Mínimo 20 caracteres.</small><%- err('mensaje') %></div>
+            <div><label class="check"><input type="checkbox" name="acepto" required <%= form.acepto ? 'checked' : '' %>> Acepto la <a href="/transparencia#datos-personales">política de tratamiento de datos personales</a> (Ley 1581 de 2012). *</label><%- err('acepto') %></div>
+            <p class="muted m-0">🔒 Sus datos personales se guardan cifrados y solo los consulta el personal autorizado.</p>
+            <div><button class="btn btn--primary" type="submit">Radicar solicitud</button></div>
+          </form>
+        </div>
+        <div>
+          <div class="info-panel" id="consulta">
+            <h3>Consultar el estado de mi solicitud</h3>
+            <% if (consultaErrors.general) { %><div class="notice notice--error" role="alert"><%= consultaErrors.general %></div><% } %>
+            <form class="form form--dark" method="post" action="/atencion/consulta" novalidate>
+              <input type="hidden" name="_csrf" value="<%= csrfToken() %>">
+              <div><label for="c-radicado">Número de radicado</label><input id="c-radicado" name="radicado" required maxlength="20" placeholder="SEM-2026-00000000" value="<%= consulta.radicado || '' %>" autocomplete="off"><% if (consultaErrors.radicado) { %><p class="field-error"><%= consultaErrors.radicado %></p><% } %></div>
+              <div><label for="c-documento">Número de documento</label><input id="c-documento" name="documento" required maxlength="20" autocomplete="off"><% if (consultaErrors.documento) { %><p class="field-error"><%= consultaErrors.documento %></p><% } %></div>
+              <div><button class="btn btn--white" type="submit">Consultar</button></div>
+            </form>
+          </div>
+          <% if (resultado) { %>
+          <div class="card card__body mt-16" role="status">
+            <span class="badge"><%= resultado.estado %></span>
+            <h3>Radicado <%= resultado.radicado %></h3>
+            <p><strong>Tipo:</strong> <%= resultado.tipo %><br><strong>Asunto:</strong> <%= resultado.asunto %><br><strong>Radicada:</strong> <%= fecha(resultado.creadoEn) %><br><strong>Última actualización:</strong> <%= fecha(resultado.actualizadoEn) %></p>
+            <% if (resultado.respuesta) { %>
+            <h4>Respuesta de la Secretaría</h4>
+            <% resultado.respuesta.split(/\n+/).filter(Boolean).forEach(function (p) { %><p><%= p %></p><% }) %>
+            <% } else { %><p class="muted">Su solicitud está en trámite. Aún no hay respuesta registrada.</p><% } %>
+          </div>
+          <% } %>
+          <h3 class="mt-40">Plazos de respuesta</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tipo de solicitud</th><th>Plazo máximo</th></tr></thead>
+              <tbody>
+                <tr><td>Petición de interés general o particular</td><td>15 días hábiles</td></tr>
+                <tr><td>Solicitud de documentos e información</td><td>10 días hábiles</td></tr>
+                <tr><td>Consultas</td><td>30 días hábiles</td></tr>
+                <tr><td>Peticiones entre autoridades</td><td>10 días hábiles</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="notificaciones">
+      <div class="container">
+        <h2 class="title-line">Notificaciones judiciales</h2>
+        <p>Las notificaciones judiciales dirigidas a la Secretaría de Educación se reciben a través de los canales oficiales de la Alcaldía de Ibagué. Consulte el correo vigente en el portal de la <a href="https://www.ibague.gov.co/" target="_blank" rel="noopener">Alcaldía de Ibagué</a>.</p>
+      </div>
+    </section>
+
+    <section class="section section--alt" id="preguntas">
+      <div class="container accordion">
+        <h2 class="title-line">Preguntas frecuentes</h2>
+        <details><summary>¿Cómo obtengo un certificado laboral como docente?</summary><div class="acc-body"><p>Si está activo, descárguelo desde Humano en Línea. Si está retirado o necesita funciones, radique una solicitud en esta página.</p></div></details>
+        <details><summary>¿Dónde solicito cupo escolar para mi hijo?</summary><div class="acc-body"><p>En la institución educativa oficial más cercana o radicando una solicitud aquí, durante el periodo de inscripciones fijado por la Secretaría.</p></div></details>
+        <details><summary>¿Cuál es el horario del Fondo de Prestaciones Económicas?</summary><div class="acc-body"><p><%= site.horario.prestaciones.join('. ') %>.</p></div></details>
+        <details><summary>¿Cómo consulto el estado de mi solicitud?</summary><div class="acc-body"><p>Use el formulario "Consultar el estado de mi solicitud" con su número de radicado y su número de documento.</p></div></details>
+        <details><summary>¿Dónde presento una queja contra un colegio privado?</summary><div class="acc-body"><p>Radique una queja en esta página indicando los hechos; será atendida por Inspección y Vigilancia.</p></div></details>
+      </div>
+    </section>
+<%- include('../partials/footer') %>

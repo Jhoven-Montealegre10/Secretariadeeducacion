@@ -1,0 +1,11 @@
+          <article class="card">
+            <% const im = imagenes.get(n.imagenId); %>
+            <% if (im) { %><img class="card__photo" src="<%= mediaSrc(im, { thumb: true }) %>" alt="<%= im.textoAlternativo %>" loading="lazy"><% } else { %><div class="card__img" aria-hidden="true"><%= n.categoria %></div><% } %>
+            <div class="card__body">
+              <span class="badge"><%= n.categoria %></span>
+              <p class="card__date"><time datetime="<%= n.fechaPublicacion %>"><%= fecha(n.fechaPublicacion) %></time></p>
+              <h3><%= n.titulo %></h3>
+              <p><%= n.resumen %></p>
+              <a class="card__link" href="/noticias/<%= n.slug %>">Leer más<span class="sr-only">: <%= n.titulo %></span></a>
+            </div>
+          </article>
