@@ -86,7 +86,18 @@ export async function provisionDatabase(): Promise<{ dbName: string; env: NodeJS
   // Los roles son globales del servidor: si ya existen se les asigna la contraseña de esta corrida.
   execFileSync(
     'psql',
-    [admin, '-q', '-v', `app_password=${APP_PASSWORD}`, '-v', `migrator_password=${MIGRATOR_PASSWORD}`, '-v', `db_name=${dbName}`, '-f', path.join(ROOT, 'scripts/postgres/01-crear-roles-y-base.sql')],
+    [
+      admin,
+      '-q',
+      '-v',
+      `app_password=${APP_PASSWORD}`,
+      '-v',
+      `migrator_password=${MIGRATOR_PASSWORD}`,
+      '-v',
+      `db_name=${dbName}`,
+      '-f',
+      path.join(ROOT, 'scripts/postgres/01-crear-roles-y-base.sql'),
+    ],
     { stdio: ['ignore', 'ignore', 'inherit'] },
   );
   const c = new Client({ connectionString: admin });
@@ -189,7 +200,10 @@ export async function createHarness(extraEnv: NodeJS.ProcessEnv = {}): Promise<H
       token = r1.body.data.csrfToken;
       // Permite reutilizar el mismo intervalo de 30 s en pruebas (en producción el código no se reutiliza).
       await h.db.run('UPDATE usuarios SET mfa_ultimo_paso = 0 WHERE id = $1', [user.id]);
-      const r2 = await agent.post('/api/v1/auth/mfa/verificar').set('X-CSRF-Token', token).send({ codigo: h.totp.generate(user.secret, clock.now()) });
+      const r2 = await agent
+        .post('/api/v1/auth/mfa/verificar')
+        .set('X-CSRF-Token', token)
+        .send({ codigo: h.totp.generate(user.secret, clock.now()) });
       if (r2.status !== 200) throw new Error(`mfa ${r2.status}: ${JSON.stringify(r2.body)}`);
       agent.csrf = r2.body.data.csrfToken;
       return agent;

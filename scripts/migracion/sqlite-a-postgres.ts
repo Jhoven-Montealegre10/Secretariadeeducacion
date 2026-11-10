@@ -28,6 +28,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { Client } from 'pg';
 import { loadConfig } from '../../src/config/configuration';
+import { TODOS } from '../../src/domain/permissions';
 import { CryptoService } from '../../src/infrastructure/security/crypto.service';
 import { arg, copyVerified, flag, sha256File } from './archivos';
 
@@ -36,7 +37,13 @@ type Kind = 'int' | 'text' | 'bool' | 'ts' | 'tsms' | 'date' | 'json' | 'email';
 
 /** Tablas en orden de dependencias, con el tipo de destino de cada columna. */
 const TABLES: Array<{ name: string; key: string[]; identity?: boolean; cols: Record<string, Kind>; version?: boolean }> = [
-  { name: 'roles', key: ['id'], identity: true, version: true, cols: { id: 'int', slug: 'text', nombre: 'text', descripcion: 'text', sistema: 'bool', creado_en: 'ts', actualizado_en: 'ts' } },
+  {
+    name: 'roles',
+    key: ['id'],
+    identity: true,
+    version: true,
+    cols: { id: 'int', slug: 'text', nombre: 'text', descripcion: 'text', sistema: 'bool', creado_en: 'ts', actualizado_en: 'ts' },
+  },
   { name: 'rol_permisos', key: ['rol_id', 'permiso'], cols: { rol_id: 'int', permiso: 'text' } },
   {
     name: 'usuarios',
@@ -94,7 +101,21 @@ const TABLES: Array<{ name: string; key: string[]; identity?: boolean; cols: Rec
     key: ['id'],
     identity: true,
     version: true,
-    cols: { id: 'int', slug: 'text', titulo: 'text', resumen: 'text', contenido: 'text', categoria: 'text', estado: 'text', fecha_publicacion: 'date', imagen_id: 'int', creado_por: 'int', actualizado_por: 'int', creado_en: 'ts', actualizado_en: 'ts' },
+    cols: {
+      id: 'int',
+      slug: 'text',
+      titulo: 'text',
+      resumen: 'text',
+      contenido: 'text',
+      categoria: 'text',
+      estado: 'text',
+      fecha_publicacion: 'date',
+      imagen_id: 'int',
+      creado_por: 'int',
+      actualizado_por: 'int',
+      creado_en: 'ts',
+      actualizado_en: 'ts',
+    },
   },
   { name: 'noticia_fotos', key: ['noticia_id', 'medio_id'], cols: { noticia_id: 'int', medio_id: 'int', orden: 'int' } },
   {
@@ -102,21 +123,64 @@ const TABLES: Array<{ name: string; key: string[]; identity?: boolean; cols: Rec
     key: ['id'],
     identity: true,
     version: true,
-    cols: { id: 'int', slug: 'text', titulo: 'text', resumen: 'text', bloques: 'json', estado: 'text', sistema: 'bool', creado_por: 'int', actualizado_por: 'int', publicada_en: 'ts', creado_en: 'ts', actualizado_en: 'ts' },
+    cols: {
+      id: 'int',
+      slug: 'text',
+      titulo: 'text',
+      resumen: 'text',
+      bloques: 'json',
+      estado: 'text',
+      sistema: 'bool',
+      creado_por: 'int',
+      actualizado_por: 'int',
+      publicada_en: 'ts',
+      creado_en: 'ts',
+      actualizado_en: 'ts',
+    },
   },
-  { name: 'sliders', key: ['id'], identity: true, version: true, cols: { id: 'int', nombre: 'text', ubicacion: 'text', activo: 'bool', creado_por: 'int', actualizado_por: 'int', creado_en: 'ts', actualizado_en: 'ts' } },
+  {
+    name: 'sliders',
+    key: ['id'],
+    identity: true,
+    version: true,
+    cols: { id: 'int', nombre: 'text', ubicacion: 'text', activo: 'bool', creado_por: 'int', actualizado_por: 'int', creado_en: 'ts', actualizado_en: 'ts' },
+  },
   {
     name: 'diapositivas',
     key: ['id'],
     identity: true,
-    cols: { id: 'int', slider_id: 'int', medio_id: 'int', titulo: 'text', texto: 'text', enlace: 'text', texto_enlace: 'text', orden: 'int', activa: 'bool', creado_en: 'ts', actualizado_en: 'ts' },
+    cols: {
+      id: 'int',
+      slider_id: 'int',
+      medio_id: 'int',
+      titulo: 'text',
+      texto: 'text',
+      enlace: 'text',
+      texto_enlace: 'text',
+      orden: 'int',
+      activa: 'bool',
+      creado_en: 'ts',
+      actualizado_en: 'ts',
+    },
   },
   { name: 'medios_usos', key: ['medio_id', 'entidad', 'entidad_id'], cols: { medio_id: 'int', entidad: 'text', entidad_id: 'int', publicado: 'bool' } },
   {
     name: 'documentos',
     key: ['id'],
     identity: true,
-    cols: { id: 'int', tipo: 'text', numero: 'text', anio: 'int', fecha: 'date', asunto: 'text', archivo: 'text', nombre_original: 'text', tamano: 'int', autor_id: 'int', creado_en: 'ts' },
+    cols: {
+      id: 'int',
+      tipo: 'text',
+      numero: 'text',
+      anio: 'int',
+      fecha: 'date',
+      asunto: 'text',
+      archivo: 'text',
+      nombre_original: 'text',
+      tamano: 'int',
+      autor_id: 'int',
+      creado_en: 'ts',
+    },
   },
   { name: 'instituciones', key: ['id'], identity: true, cols: { id: 'int', nombre: 'text', zona: 'text' } },
   {
@@ -141,15 +205,38 @@ const TABLES: Array<{ name: string; key: string[]; identity?: boolean; cols: Rec
       actualizado_en: 'ts',
     },
   },
-  { name: 'tokens_recuperacion', key: ['id'], identity: true, cols: { id: 'int', usuario_id: 'int', token_hash: 'text', expira_en: 'tsms', usado_en: 'ts', creado_en: 'ts' } },
+  {
+    name: 'tokens_recuperacion',
+    key: ['id'],
+    identity: true,
+    cols: { id: 'int', usuario_id: 'int', token_hash: 'text', expira_en: 'tsms', usado_en: 'ts', creado_en: 'ts' },
+  },
   { name: 'codigos_recuperacion', key: ['id'], identity: true, cols: { id: 'int', usuario_id: 'int', codigo_hash: 'text', usado_en: 'ts', creado_en: 'ts' } },
   {
     name: 'auditoria_eventos',
     key: ['id'],
     identity: true,
-    cols: { id: 'int', usuario_id: 'int', usuario_email: 'text', accion: 'text', recurso: 'text', recurso_id: 'text', resultado: 'text', detalle: 'text', ip_hash: 'text', creado_en: 'ts', hash_anterior: 'text', hash: 'text' },
+    cols: {
+      id: 'int',
+      usuario_id: 'int',
+      usuario_email: 'text',
+      accion: 'text',
+      recurso: 'text',
+      recurso_id: 'text',
+      resultado: 'text',
+      detalle: 'text',
+      ip_hash: 'text',
+      creado_en: 'ts',
+      hash_anterior: 'text',
+      hash: 'text',
+    },
   },
-  { name: 'visitas', key: ['id'], identity: true, cols: { id: 'int', fecha: 'date', ruta: 'text', visitante: 'text', fuente: 'text', referente_dominio: 'text', dispositivo: 'text', pais: 'text' } },
+  {
+    name: 'visitas',
+    key: ['id'],
+    identity: true,
+    cols: { id: 'int', fecha: 'date', ruta: 'text', visitante: 'text', fuente: 'text', referente_dominio: 'text', dispositivo: 'text', pais: 'text' },
+  },
   { name: 'sales_estadisticas', key: ['fecha'], cols: { fecha: 'date', sal: 'text' } },
 ];
 
@@ -200,14 +287,18 @@ function normalize(kind: Kind, v: unknown, where: string): unknown {
 /** JSON canónico (claves ordenadas) para comparar jsonb sin depender del orden de las claves. */
 function canonical(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
-  if (v && typeof v === 'object') return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical((v as Row)[k])}`).join(',')}}`;
+  if (v && typeof v === 'object')
+    return `{${Object.keys(v)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((v as Row)[k])}`)
+      .join(',')}}`;
   return JSON.stringify(v);
 }
 
 function fingerprint(rows: Row[], cols: Record<string, Kind>): string {
-  const h = crypto.createHash('sha256');
-  for (const r of rows) h.update(canonical(Object.keys(cols).map((c) => (cols[c] === 'json' && r[c] !== null ? JSON.parse(String(r[c])) : r[c]))) + '\n');
-  return h.digest('hex');
+  // Las filas se ordenan por su forma canónica: la huella no depende de la intercalación de cada motor.
+  const lines = rows.map((r) => canonical(Object.keys(cols).map((c) => (cols[c] === 'json' && r[c] !== null ? JSON.parse(String(r[c])) : r[c])))).sort();
+  return crypto.createHash('sha256').update(lines.join('\n')).digest('hex');
 }
 
 interface TableReport {
@@ -243,13 +334,33 @@ async function main(): Promise<void> {
       continue;
     }
     const order = t.key.map((k) => `"${k}"`).join(', ');
-    const rows = src.prepare(`SELECT ${Object.keys(t.cols).map((c) => `"${c}"`).join(', ')} FROM "${t.name}" ORDER BY ${order}`).all() as Row[];
+    const rows = src
+      .prepare(
+        `SELECT ${Object.keys(t.cols)
+          .map((c) => `"${c}"`)
+          .join(', ')} FROM "${t.name}" ORDER BY ${order}`,
+      )
+      .all() as Row[];
     source.set(
       t.name,
       rows.map((r, i) => Object.fromEntries(Object.entries(t.cols).map(([c, k]) => [c, normalize(k, r[c], `${t.name}[${i}].${c}`)]))),
     );
   }
   src.close();
+  // El rol Administrador es inmutable desde el panel: recibe aquí los permisos creados en la versión 4
+  // (p. ej. system.read). Es la única transformación de datos de permisos y queda en el informe.
+  const added: string[] = [];
+  const admin = (source.get('roles') ?? []).find((r) => r.slug === 'administrador');
+  if (admin) {
+    const perms = source.get('rol_permisos') ?? [];
+    for (const p of TODOS) {
+      if (!perms.some((r) => r.rol_id === admin.id && r.permiso === p)) {
+        perms.push({ rol_id: admin.id, permiso: p });
+        added.push(p);
+      }
+    }
+    perms.sort((a, b) => (a.rol_id as number) - (b.rol_id as number) || String(a.permiso).localeCompare(String(b.permiso), 'en'));
+  }
   const emails = (source.get('usuarios') ?? []).map((u) => u.email as string);
   const dupEmails = emails.filter((e, i) => emails.indexOf(e) !== i);
   if (dupEmails.length) throw new Error(`Correos repetidos al ignorar mayúsculas (resuélvalos en el origen): ${dupEmails.join(', ')}`);
@@ -261,7 +372,8 @@ async function main(): Promise<void> {
     database: db.database,
     user: db.migrationUser,
     password: db.migrationPassword,
-    ssl: db.ssl === 'disable' ? false : { rejectUnauthorized: db.ssl === 'verify-full', ...(db.sslCaFile ? { ca: fs.readFileSync(db.sslCaFile, 'utf8') } : {}) },
+    ssl:
+      db.ssl === 'disable' ? false : { rejectUnauthorized: db.ssl === 'verify-full', ...(db.sslCaFile ? { ca: fs.readFileSync(db.sslCaFile, 'utf8') } : {}) },
     options: '-c search_path=portal -c timezone=UTC -c role=semibague_owner',
     application_name: 'semibague-migracion-datos',
   });
@@ -273,7 +385,8 @@ async function main(): Promise<void> {
     await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
     if (!verifyOnly) {
       const pending = await q<{ n: number }>('SELECT COUNT(*)::int AS n FROM usuarios');
-      if (pending[0].n > 0) throw new Error('El destino ya tiene usuarios: la migración solo se ejecuta sobre un esquema recién creado (vea el runbook para repetirla).');
+      if (pending[0].n > 0)
+        throw new Error('El destino ya tiene usuarios: la migración solo se ejecuta sobre un esquema recién creado (vea el runbook para repetirla).');
       // Bloquea escrituras concurrentes en las tablas de destino mientras dura la carga.
       await client.query(`LOCK TABLE ${TABLES.map((t) => t.name).join(', ')} IN ACCESS EXCLUSIVE MODE`);
       // Datos semilla de las migraciones (roles y páginas del sistema): se reemplazan por los del origen.
@@ -292,17 +405,24 @@ async function main(): Promise<void> {
         for (let i = 0; i < rows.length; i += 500) {
           const batch = rows.slice(i, i + 500);
           const values: unknown[] = [];
-          const tuples = batch.map((r) => `(${cols.map((c, j) => {
-            values.push(r[c]);
-            return `$${values.length}${casts[j]}`;
-          }).join(', ')})`);
+          const tuples = batch.map(
+            (r) =>
+              `(${cols
+                .map((c, j) => {
+                  values.push(r[c]);
+                  return `$${values.length}${casts[j]}`;
+                })
+                .join(', ')})`,
+          );
           const overriding = t.identity ? 'OVERRIDING SYSTEM VALUE' : '';
           await client.query(`INSERT INTO "${t.name}" (${cols.map((c) => `"${c}"`).join(', ')}) ${overriding} VALUES ${tuples.join(', ')}`, values);
         }
       }
       // Secuencias: el próximo ID generado continúa después del máximo migrado.
       for (const t of TABLES.filter((x) => x.identity)) {
-        await client.query(`SELECT setval(pg_get_serial_sequence('portal.${t.name}', 'id'), GREATEST((SELECT COALESCE(MAX(id), 0) FROM "${t.name}"), 1), (SELECT COUNT(*) > 0 FROM "${t.name}"))`);
+        await client.query(
+          `SELECT setval(pg_get_serial_sequence('portal.${t.name}', 'id'), GREATEST((SELECT COALESCE(MAX(id), 0) FROM "${t.name}"), 1), (SELECT COUNT(*) > 0 FROM "${t.name}"))`,
+        );
       }
       // Archivos: copia verificada al almacenamiento del nuevo sistema.
       copyVerified(mediaSrc, config.mediaDir);
@@ -313,14 +433,29 @@ async function main(): Promise<void> {
     const tables: TableReport[] = [];
     for (const t of TABLES) {
       const cols = Object.keys(t.cols);
-      const select = cols.map((c) => (t.cols[c] === 'ts' || t.cols[c] === 'tsms' ? `to_char("${c}" AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS "${c}"` : t.cols[c] === 'date' ? `to_char("${c}", 'YYYY-MM-DD') AS "${c}"` : t.cols[c] === 'json' ? `"${c}"::text AS "${c}"` : `"${c}"`));
+      const select = cols.map((c) =>
+        t.cols[c] === 'ts' || t.cols[c] === 'tsms'
+          ? `to_char("${c}" AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS "${c}"`
+          : t.cols[c] === 'date'
+            ? `to_char("${c}", 'YYYY-MM-DD') AS "${c}"`
+            : t.cols[c] === 'json'
+              ? `"${c}"::text AS "${c}"`
+              : `"${c}"`,
+      );
       const dest = (await q(`SELECT ${select.join(', ')} FROM "${t.name}" ORDER BY ${t.key.map((k) => `"${k}"`).join(', ')}`)).map((r) =>
         Object.fromEntries(cols.map((c) => [c, t.cols[c] === 'int' && r[c] !== null ? Number(r[c]) : r[c]])),
       );
       const srcRows = source.get(t.name) ?? [];
       const fs1 = fingerprint(srcRows, t.cols);
       const fs2 = fingerprint(dest, t.cols);
-      tables.push({ tabla: t.name, origen: srcRows.length, destino: dest.length, huellaOrigen: fs1, huellaDestino: fs2, coincide: srcRows.length === dest.length && fs1 === fs2 });
+      tables.push({
+        tabla: t.name,
+        origen: srcRows.length,
+        destino: dest.length,
+        huellaOrigen: fs1,
+        huellaDestino: fs2,
+        coincide: srcRows.length === dest.length && fs1 === fs2,
+      });
     }
 
     const orphanUsages = await q(
@@ -329,12 +464,16 @@ async function main(): Promise<void> {
           OR (mu.entidad = 'noticia' AND NOT EXISTS (SELECT 1 FROM noticias n WHERE n.id = mu.entidad_id))
           OR (mu.entidad = 'diapositiva' AND NOT EXISTS (SELECT 1 FROM diapositivas d WHERE d.id = mu.entidad_id))`,
     );
-    const fkCheck = await q<{ conname: string; convalidated: boolean }>("SELECT conname, convalidated FROM pg_constraint WHERE contype = 'f' AND connamespace = 'portal'::regnamespace");
+    const fkCheck = await q<{ conname: string; convalidated: boolean }>(
+      "SELECT conname, convalidated FROM pg_constraint WHERE contype = 'f' AND connamespace = 'portal'::regnamespace",
+    );
 
     // Cadena de auditoría recalculada con la clave del sistema.
     let previous = 'genesis';
     let auditBroken: number | null = null;
-    for (const r of await q("SELECT id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, to_char(creado_en AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS creado_en, hash_anterior, hash FROM auditoria_eventos ORDER BY id")) {
+    for (const r of await q(
+      "SELECT id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, to_char(creado_en AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS creado_en, hash_anterior, hash FROM auditoria_eventos ORDER BY id",
+    )) {
       const expected = cryptoSvc.auditChainHash(previous, {
         usuarioId: (r.usuario_id as number | null) ?? null,
         usuarioEmail: (r.usuario_email as string | null) ?? null,
@@ -350,7 +489,7 @@ async function main(): Promise<void> {
         auditBroken = Number(r.id);
         break;
       }
-      previous = r.hash as string;
+      previous = r.hash;
     }
 
     // La clave de cifrado es la correcta: se descifra una muestra de PQRSD y de secretos MFA.
@@ -374,7 +513,11 @@ async function main(): Promise<void> {
 
     // Archivos referenciados: existen en el destino y su SHA-256 coincide con el origen.
     const referenced = [
-      ...(await q<{ f: string }>('SELECT archivo AS f FROM medios UNION ALL SELECT miniatura FROM medios WHERE miniatura IS NOT NULL')).map((r) => ({ f: r.f, from: mediaSrc, to: config.mediaDir })),
+      ...(await q<{ f: string }>('SELECT archivo AS f FROM medios UNION ALL SELECT miniatura FROM medios WHERE miniatura IS NOT NULL')).map((r) => ({
+        f: r.f,
+        from: mediaSrc,
+        to: config.mediaDir,
+      })),
       ...(await q<{ f: string }>('SELECT archivo AS f FROM documentos')).map((r) => ({ f: r.f, from: uploadsSrc, to: config.uploadsDir })),
     ];
     const missingFiles: string[] = [];
@@ -385,7 +528,12 @@ async function main(): Promise<void> {
     }
 
     const ok =
-      tables.every((t) => t.coincide) && orphanUsages.length === 0 && fkCheck.every((c) => c.convalidated) && auditBroken === null && decrypt.errores === 0 && missingFiles.length === 0;
+      tables.every((t) => t.coincide) &&
+      orphanUsages.length === 0 &&
+      fkCheck.every((c) => c.convalidated) &&
+      auditBroken === null &&
+      decrypt.errores === 0 &&
+      missingFiles.length === 0;
     const report = {
       fecha: new Date().toISOString(),
       modo: verifyOnly ? 'solo-verificar' : dryRun ? 'simulacro (ROLLBACK)' : 'migración',
@@ -394,6 +542,7 @@ async function main(): Promise<void> {
       duracionMs: Date.now() - started,
       tablas: tables,
       noMigradas: NOT_MIGRATED,
+      permisosAgregadosAlAdministrador: added,
       integridadReferencial: { clavesForaneasValidadas: fkCheck.length, usosHuerfanos: orphanUsages.length },
       auditoria: { eventos: tables.find((t) => t.tabla === 'auditoria_eventos')?.destino ?? 0, cadenaIntegra: auditBroken === null, idAlterado: auditBroken },
       descifrado: decrypt,
@@ -406,7 +555,8 @@ async function main(): Promise<void> {
 
     if (reportFile) fs.writeFileSync(reportFile, JSON.stringify(report, null, 2), { mode: 0o600 });
     console.log(`Resultado: ${report.resultado} (${report.modo}, ${report.duracionMs} ms)`);
-    for (const t of tables) console.log(`  ${t.coincide ? '✓' : '✗'} ${t.tabla.padEnd(22)} origen=${String(t.origen).padStart(6)} destino=${String(t.destino).padStart(6)}`);
+    for (const t of tables)
+      console.log(`  ${t.coincide ? '✓' : '✗'} ${t.tabla.padEnd(22)} origen=${String(t.origen).padStart(6)} destino=${String(t.destino).padStart(6)}`);
     console.log(`  ${auditBroken === null ? '✓' : '✗'} cadena de auditoría (${report.auditoria.eventos} eventos)`);
     console.log(`  ${decrypt.errores === 0 ? '✓' : '✗'} descifrado con DATA_ENCRYPTION_KEY (pqrsd=${decrypt.pqrsd}, mfa=${decrypt.mfa})`);
     console.log(`  ${missingFiles.length === 0 ? '✓' : '✗'} archivos referenciados (${referenced.length})`);

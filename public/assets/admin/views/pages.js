@@ -174,9 +174,11 @@ async function edit(main, ctx, id) {
         estado: estado.value,
         bloques: blocks.read(),
         ...(slug.value && !page.sistema ? { slug: slug.value } : {}),
+        ...(isNew ? {} : { version: page.version }),
       };
       try {
         const { data } = isNew ? await post('/paginas', body) : await put(`/paginas/${page.id}`, body);
+        page.version = data.version; // la próxima edición parte de la versión recién guardada
         toast(data.estado === 'publicada' ? 'Página guardada y publicada. El sitio ya muestra los cambios.' : 'Borrador guardado. No es visible al público.');
         if (isNew) ctx.navigate(`/admin/paginas/${data.id}`, { replace: true });
       } catch (err) {

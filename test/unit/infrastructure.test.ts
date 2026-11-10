@@ -77,7 +77,17 @@ describe('Criptografía', () => {
   });
 
   test('la cadena de auditoría cambia si cambia cualquier campo o el eslabón anterior', () => {
-    const row = { usuarioId: 1, usuarioEmail: 'a@example.gov.co', accion: 'login', recurso: 'usuario', recursoId: '1', resultado: 'exito', detalle: '', ipHash: null, creadoEn: '2026-11-10 12:00:00' };
+    const row = {
+      usuarioId: 1,
+      usuarioEmail: 'a@example.gov.co',
+      accion: 'login',
+      recurso: 'usuario',
+      recursoId: '1',
+      resultado: 'exito',
+      detalle: '',
+      ipHash: null,
+      creadoEn: '2026-11-10 12:00:00',
+    };
     const h1 = svc.auditChainHash('genesis', row);
     assert.notEqual(h1, svc.auditChainHash('genesis', { ...row, detalle: 'x' }));
     assert.notEqual(h1, svc.auditChainHash('otro', row));
@@ -101,7 +111,8 @@ describe('Almacenamiento de archivos', () => {
     const name = fsx.newName('png');
     assert.match(name, /^[a-f0-9]{32}\.png$/);
     assert.ok(fsx.resolve(name));
-    for (const bad of ['../package.json', '/etc/passwd', 'a.png', `${'a'.repeat(32)}.png/../x`, `${'a'.repeat(32)}.png\0.js`]) assert.equal(fsx.resolve(bad), null, bad);
+    for (const bad of ['../package.json', '/etc/passwd', 'a.png', `${'a'.repeat(32)}.png/../x`, `${'a'.repeat(32)}.png\0.js`])
+      assert.equal(fsx.resolve(bad), null, bad);
   });
 });
 

@@ -26,10 +26,10 @@ const doc = () => h.get(OpenApiDocs).fullDoc as OpenAPIObject;
 before(async () => {
   for (const stream of [process.stdout, process.stderr]) {
     const orig = stream.write.bind(stream);
-    stream.write = ((chunk: unknown, ...rest: unknown[]) => {
+    stream.write = (chunk: unknown, ...rest: unknown[]) => {
       logs.push(String(chunk));
       return (orig as (...a: unknown[]) => boolean)(chunk, ...rest);
-    });
+    };
   }
   h = await createHarness();
   admin = await h.createUser({ email: 'admin@example.gov.co', rol: 'administrador' });
@@ -112,18 +112,34 @@ describe('Contrato OpenAPI', () => {
   test('cada operación privada declara seguridad, permiso y errores 401/403; las que modifican, CSRF', () => {
     const publicAuth = /auth\/(csrf|login|logout|recuperacion)/;
     for (const [p, ops] of Object.entries(doc().paths)) {
-      for (const [m, op] of Object.entries(ops as Record<string, { summary?: string; tags?: string[]; responses: Record<string, unknown>; security?: Array<Record<string, unknown>> }>)) {
+      for (const [m, op] of Object.entries(
+        ops as Record<string, { summary?: string; tags?: string[]; responses: Record<string, unknown>; security?: Array<Record<string, unknown>> }>,
+      )) {
         assert.ok(op.summary && op.tags?.length, `${m} ${p} sin resumen o módulo`);
         if (p.startsWith('/api/v1/public')) continue;
         if (!publicAuth.test(p)) assert.ok(op.responses['401'] && op.responses['403'], `${m} ${p} sin 401/403`);
-        if (m !== 'get') assert.ok(op.security?.some((s) => 'csrfToken' in s), `${m} ${p} sin CSRF documentado`);
+        if (m !== 'get')
+          assert.ok(
+            op.security?.some((s) => 'csrfToken' in s),
+            `${m} ${p} sin CSRF documentado`,
+          );
       }
     }
   });
 
   test('las respuestas reales cumplen el esquema documentado (validación estricta fuera de producción)', async () => {
     // El interceptor valida cada respuesta contra su esquema: un campo de más provoca 500.
-    for (const url of ['/api/v1/usuarios', '/api/v1/roles', '/api/v1/medios', '/api/v1/paginas', '/api/v1/noticias', '/api/v1/sliders', '/api/v1/auditoria', '/api/v1/sistema/metricas', '/api/v1/permisos']) {
+    for (const url of [
+      '/api/v1/usuarios',
+      '/api/v1/roles',
+      '/api/v1/medios',
+      '/api/v1/paginas',
+      '/api/v1/noticias',
+      '/api/v1/sliders',
+      '/api/v1/auditoria',
+      '/api/v1/sistema/metricas',
+      '/api/v1/permisos',
+    ]) {
       assert.equal((await h.call(adminAgent, 'get', url)).status, 200, url);
     }
   });
@@ -149,7 +165,16 @@ describe('Contrato OpenAPI', () => {
 
 describe('Respuestas y registros sin secretos', () => {
   test('ninguna respuesta de la API incluye hashes, secretos MFA ni tokens', async () => {
-    const urls = ['/api/v1/usuarios', `/api/v1/usuarios/${admin.id}`, '/api/v1/auth/sesion', '/api/v1/roles', '/api/v1/auditoria', '/api/v1/medios', '/api/v1/paginas', '/api/v1/noticias'];
+    const urls = [
+      '/api/v1/usuarios',
+      `/api/v1/usuarios/${admin.id}`,
+      '/api/v1/auth/sesion',
+      '/api/v1/roles',
+      '/api/v1/auditoria',
+      '/api/v1/medios',
+      '/api/v1/paginas',
+      '/api/v1/noticias',
+    ];
     for (const u of urls) {
       const text = JSON.stringify((await adminAgent.get(u)).body);
       assert.doesNotMatch(text, /\$argon2|password_?hash|mfa_?secreto|secretoEnc|token_?hash|codigo_?hash/i, u);
@@ -202,7 +227,9 @@ describe('Auditoría', () => {
 
 describe('PostgreSQL: mínimo privilegio y protección del esquema', () => {
   test('la aplicación usa una cuenta sin superusuario ni permisos de DDL', async () => {
-    const r = await h.db.one<{ rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean }>('SELECT rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname = current_user');
+    const r = await h.db.one<{ rolsuper: boolean; rolcreatedb: boolean; rolcreaterole: boolean }>(
+      'SELECT rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname = current_user',
+    );
     assert.deepEqual(r, { rolsuper: false, rolcreatedb: false, rolcreaterole: false });
     await assert.rejects(h.db.run('CREATE TABLE portal.intrusa (id int)'), /permission denied/);
     await assert.rejects(h.db.run('DROP TABLE portal.usuarios'), /must be owner|permission denied/);
@@ -262,10 +289,23 @@ describe('Cabeceras, errores y archivos del servidor', () => {
   test('errores sin trazas ni detalles internos; archivos del servidor inaccesibles', async () => {
     const res = await pub().get('/api/v1/noticias/abc').set('Accept', 'application/json');
     assert.ok([401, 404, 422].includes(res.status));
-    const bad = await adminAgent.post('/api/v1/noticias').set('X-CSRF-Token', String(adminAgent.csrf)).set('Content-Type', 'application/json').send('{"titulo": ');
+    const bad = await adminAgent
+      .post('/api/v1/noticias')
+      .set('X-CSRF-Token', String(adminAgent.csrf))
+      .set('Content-Type', 'application/json')
+      .send('{"titulo": ');
     assert.equal(bad.status, 400);
     assert.doesNotMatch(JSON.stringify(bad.body), /at .*\.js:\d+|node_modules|SyntaxError/);
-    for (const url of ['/.env', '/package.json', '/src/main.ts', '/dist/src/main.js', '/storage/semibague.sqlite', '/assets/../../.env', '/docs/openapi.json', '/views/pages/inicio.ejs']) {
+    for (const url of [
+      '/.env',
+      '/package.json',
+      '/src/main.ts',
+      '/dist/src/main.js',
+      '/storage/semibague.sqlite',
+      '/assets/../../.env',
+      '/docs/openapi.json',
+      '/views/pages/inicio.ejs',
+    ]) {
       assert.equal((await pub().get(url)).status, 404, url);
     }
   });

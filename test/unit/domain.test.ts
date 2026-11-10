@@ -5,7 +5,15 @@ import { bloquesSchema, esEnlaceSeguro, mediosEnBloques, SLUG_RE, slugify, UBICA
 import { EditConflictError, ForbiddenError, ValidationError } from '../../src/domain/errors';
 import { validarPassword } from '../../src/domain/password-policy';
 import { catalogo, esPermisoValido, PERMISOS_EDITOR, TODOS } from '../../src/domain/permissions';
-import { accionPublicacion, diapositivaVisible, fechaColombia, noticiaVisible, ordenValido, requierePermisoPublicar, versionCoincide } from '../../src/domain/publication';
+import {
+  accionPublicacion,
+  diapositivaVisible,
+  fechaColombia,
+  noticiaVisible,
+  ordenValido,
+  requierePermisoPublicar,
+  versionCoincide,
+} from '../../src/domain/publication';
 
 describe('Estados de publicación', () => {
   test('una noticia solo es visible publicada y con fecha cumplida (hora de Colombia)', () => {
@@ -77,8 +85,16 @@ describe('Slugs, ubicaciones y enlaces', () => {
   });
 
   test('enlaces seguros: internos, https, mailto y tel; nunca javascript:, data: ni //externo', () => {
-    for (const ok of ['', '/tramites', '#mision', 'https://www.gov.co/', 'mailto:educacion@example.gov.co', 'tel:+57 608 000 0000']) assert.equal(esEnlaceSeguro(ok), true, ok);
-    for (const bad of ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'data:text/html,<script>', '//malicioso.example', 'vbscript:x', 'https://x" onmouseover="a']) {
+    for (const ok of ['', '/tramites', '#mision', 'https://www.gov.co/', 'mailto:educacion@example.gov.co', 'tel:+57 608 000 0000'])
+      assert.equal(esEnlaceSeguro(ok), true, ok);
+    for (const bad of [
+      'javascript:alert(1)',
+      'JaVaScRiPt:alert(1)',
+      'data:text/html,<script>',
+      '//malicioso.example',
+      'vbscript:x',
+      'https://x" onmouseover="a',
+    ]) {
       assert.equal(esEnlaceSeguro(bad), false, bad);
     }
   });
@@ -119,10 +135,14 @@ describe('Política de contraseñas', () => {
 
   test('pasa los datos del usuario al evaluador (no se permite usar el propio correo)', () => {
     let recibidos: string[] = [];
-    validarPassword('una frase larga y poco común', (_p, inputs) => {
-      recibidos = inputs;
-      return { score: 4 };
-    }, ['ana@example.gov.co', undefined, 'Ana']);
+    validarPassword(
+      'una frase larga y poco común',
+      (_p, inputs) => {
+        recibidos = inputs;
+        return { score: 4 };
+      },
+      ['ana@example.gov.co', undefined, 'Ana'],
+    );
     assert.deepEqual(recibidos, ['ana@example.gov.co', 'Ana']);
   });
 });

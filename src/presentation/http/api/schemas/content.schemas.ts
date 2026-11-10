@@ -45,12 +45,10 @@ export const Media = named(
     totalUsos: z.number().int(),
     url: z.string().meta({ description: 'URL de acceso desde el panel (autenticada).', example: '/api/v1/medios/31/archivo' }),
     miniaturaUrl: z.string().nullable(),
-    urlPublica: z
-      .string()
-      .meta({
-        description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.',
-        example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg',
-      }),
+    urlPublica: z.string().meta({
+      description: 'URL pública; responde 404 mientras el archivo sea privado y no esté en uso publicado.',
+      example: '/media/3f2a9c0d1e4b5a6c7d8e9f0a1b2c3d4e.jpg',
+    }),
     creadoEn: FechaHora,
     actualizadoEn: FechaHora,
     version: VersionOutput,

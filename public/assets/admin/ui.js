@@ -33,6 +33,7 @@ export function toast(message, type = 'ok') {
 
 export function errorMessage(err) {
   if (!err) return 'Ocurrió un error.';
+  if (err.code === 'EDIT_CONFLICT') return `${err.message} (Sus cambios no se guardaron: copie lo que necesite y recargue la página.)`;
   const extra = err.details?.length ? ' ' + err.details.map((d) => (d.campo ? `${d.campo}: ${d.mensaje}` : d.mensaje)).join(' · ') : '';
   return err.message + extra;
 }

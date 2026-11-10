@@ -128,7 +128,10 @@ describe('Reglas de usuarios y roles', () => {
     const x = await h.createUser({ email: 'adminx@example.gov.co', rol: 'administrador' });
     const y = await h.createUser({ email: 'adminy@example.gov.co', rol: 'administrador' });
     // Deja solo a x e y como administradores activos.
-    await h.db.run("UPDATE usuarios SET activo = false WHERE rol_id = (SELECT id FROM roles WHERE slug = 'administrador') AND id NOT IN ($1, $2)", [x.id, y.id]);
+    await h.db.run("UPDATE usuarios SET activo = false WHERE rol_id = (SELECT id FROM roles WHERE slug = 'administrador') AND id NOT IN ($1, $2)", [
+      x.id,
+      y.id,
+    ]);
     const [ax, ay] = [await h.login(x), await h.login(y)];
     const [r1, r2] = await Promise.all([
       h.call(ax, 'patch', `/api/v1/usuarios/${y.id}`, { activo: false }),
@@ -143,11 +146,19 @@ describe('Reglas de usuarios y roles', () => {
   });
 
   test('crear usuario envía invitación y no devuelve hashes ni secretos', async () => {
-    const res = await h.call(adminAgent, 'post', '/api/v1/usuarios', { email: 'invitado@example.gov.co', nombre: 'Persona Invitada', rolId: (await role('editor')).id });
+    const res = await h.call(adminAgent, 'post', '/api/v1/usuarios', {
+      email: 'invitado@example.gov.co',
+      nombre: 'Persona Invitada',
+      rolId: (await role('editor')).id,
+    });
     assert.equal(res.status, 201);
     assert.doesNotMatch(JSON.stringify(res.body), /argon2|password|secreto|token/i);
     assert.equal(res.body.data.mfaConfigurado, false);
-    const dup = await h.call(adminAgent, 'post', '/api/v1/usuarios', { email: 'INVITADO@example.gov.co', nombre: 'Duplicado', rolId: (await role('editor')).id });
+    const dup = await h.call(adminAgent, 'post', '/api/v1/usuarios', {
+      email: 'INVITADO@example.gov.co',
+      nombre: 'Duplicado',
+      rolId: (await role('editor')).id,
+    });
     assert.equal(dup.status, 409, 'el correo es único sin distinguir mayúsculas');
   });
 
@@ -180,7 +191,10 @@ describe('Reglas de usuarios y roles', () => {
     const adminRole = await role('administrador');
     assert.equal((await h.call(ra, 'patch', `/api/v1/usuarios/${target.id}`, { rolId: adminRole.id })).status, 403);
     assert.equal((await h.call(ra, 'patch', `/api/v1/usuarios/${rrhh.id}`, { rolId: adminRole.id })).status, 403);
-    assert.equal((await h.call(ra, 'post', '/api/v1/usuarios', { email: 'nuevoadmin@example.gov.co', nombre: 'Nuevo Admin', rolId: adminRole.id })).status, 403);
+    assert.equal(
+      (await h.call(ra, 'post', '/api/v1/usuarios', { email: 'nuevoadmin@example.gov.co', nombre: 'Nuevo Admin', rolId: adminRole.id })).status,
+      403,
+    );
   });
 
   test('edición simultánea de un usuario: la versión antigua recibe 409 EDIT_CONFLICT', async () => {
@@ -201,7 +215,11 @@ describe('CSRF', () => {
     const other = await h.login(await h.createUser({ email: 'csrf@example.gov.co' }));
     const wrong = await editorAgent.post('/api/v1/noticias').set('X-CSRF-Token', String(other.csrf)).send({});
     assert.equal(wrong.status, 403);
-    const cross = await editorAgent.post('/api/v1/noticias').set('X-CSRF-Token', String(editorAgent.csrf)).set('Origin', 'https://sitio-malicioso.example').send({});
+    const cross = await editorAgent
+      .post('/api/v1/noticias')
+      .set('X-CSRF-Token', String(editorAgent.csrf))
+      .set('Origin', 'https://sitio-malicioso.example')
+      .send({});
     assert.equal(cross.status, 403);
   });
 

@@ -34,7 +34,11 @@ describe('Páginas', () => {
   });
 
   test('un borrador no es accesible por la ruta pública ni por la API pública; la vista previa exige sesión', async () => {
-    const res = await h.call(editorAgent, 'post', '/api/v1/paginas', { titulo: 'Calendario escolar 2027', estado: 'borrador', bloques: [{ tipo: 'texto', html: '<p>Fechas del calendario.</p>' }] });
+    const res = await h.call(editorAgent, 'post', '/api/v1/paginas', {
+      titulo: 'Calendario escolar 2027',
+      estado: 'borrador',
+      bloques: [{ tipo: 'texto', html: '<p>Fechas del calendario.</p>' }],
+    });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     const { id, slug } = res.body.data;
     assert.equal(slug, 'calendario-escolar-2027');
@@ -54,7 +58,11 @@ describe('Páginas', () => {
   });
 
   test('editar una página publicada invalida la caché pública de inmediato', async () => {
-    const created = await h.call(adminAgent, 'post', '/api/v1/paginas', { titulo: 'Página en caché', estado: 'publicada', bloques: [{ tipo: 'texto', html: '<p>Versión uno</p>' }] });
+    const created = await h.call(adminAgent, 'post', '/api/v1/paginas', {
+      titulo: 'Página en caché',
+      estado: 'publicada',
+      bloques: [{ tipo: 'texto', html: '<p>Versión uno</p>' }],
+    });
     const { id, slug, version } = created.body.data;
     assert.match((await pub().get(`/${slug}`)).text, /Versión uno/); // queda en caché
     await h.call(adminAgent, 'put', `/api/v1/paginas/${id}`, { bloques: [{ tipo: 'texto', html: '<p>Versión dos</p>' }], version });
@@ -110,8 +118,20 @@ describe('Páginas', () => {
   });
 
   test('enlaces peligrosos en tarjetas y botones se rechazan', async () => {
-    assert.equal((await h.call(editorAgent, 'post', '/api/v1/paginas', { titulo: 'Enlaces', bloques: [{ tipo: 'boton', texto: 'Clic', enlace: 'javascript:alert(1)' }] })).status, 422);
-    assert.equal((await h.call(editorAgent, 'post', '/api/v1/paginas', { titulo: 'Enlaces dos', bloques: [{ tipo: 'tarjetas', items: [{ titulo: 'x', enlace: '//malicioso.example' }] }] })).status, 422);
+    assert.equal(
+      (await h.call(editorAgent, 'post', '/api/v1/paginas', { titulo: 'Enlaces', bloques: [{ tipo: 'boton', texto: 'Clic', enlace: 'javascript:alert(1)' }] }))
+        .status,
+      422,
+    );
+    assert.equal(
+      (
+        await h.call(editorAgent, 'post', '/api/v1/paginas', {
+          titulo: 'Enlaces dos',
+          bloques: [{ tipo: 'tarjetas', items: [{ titulo: 'x', enlace: '//malicioso.example' }] }],
+        })
+      ).status,
+      422,
+    );
   });
 
   test('las páginas del sistema no se eliminan y el editor no elimina definitivamente', async () => {
@@ -133,8 +153,19 @@ describe('Noticias', () => {
   const base = { resumen: 'Resumen de prueba de la noticia', contenido: '<p>Contenido completo de la noticia de prueba.</p>', categoria: 'Cobertura' };
 
   test('las publicadas aparecen en el inicio de la más reciente a la más antigua; borradores y fechas futuras no', async () => {
-    await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Noticia antigua publicada', estado: 'publicada', fechaPublicacion: '2026-01-10', imagenId: imageId });
-    await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Noticia reciente publicada', estado: 'publicada', fechaPublicacion: '2026-03-15' });
+    await h.call(editorAgent, 'post', '/api/v1/noticias', {
+      ...base,
+      titulo: 'Noticia antigua publicada',
+      estado: 'publicada',
+      fechaPublicacion: '2026-01-10',
+      imagenId: imageId,
+    });
+    await h.call(editorAgent, 'post', '/api/v1/noticias', {
+      ...base,
+      titulo: 'Noticia reciente publicada',
+      estado: 'publicada',
+      fechaPublicacion: '2026-03-15',
+    });
     await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Borrador secreto', estado: 'borrador', fechaPublicacion: '2026-03-20' });
     await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Noticia del futuro', estado: 'publicada', fechaPublicacion: '2099-01-01' });
     const home = (await pub().get('/')).text;
@@ -157,10 +188,18 @@ describe('Noticias', () => {
   });
 
   test('el contenido de la noticia se sanitiza y la categoría se valida', async () => {
-    const res = await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Con script', contenido: '<p>Texto válido de prueba.</p><script>alert(1)</script>', fechaPublicacion: '2026-02-01' });
+    const res = await h.call(editorAgent, 'post', '/api/v1/noticias', {
+      ...base,
+      titulo: 'Con script',
+      contenido: '<p>Texto válido de prueba.</p><script>alert(1)</script>',
+      fechaPublicacion: '2026-02-01',
+    });
     assert.equal(res.status, 201);
     assert.doesNotMatch(res.body.data.contenido, /script/);
-    assert.equal((await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Mala', categoria: 'Inventada', fechaPublicacion: '2026-02-01' })).status, 422);
+    assert.equal(
+      (await h.call(editorAgent, 'post', '/api/v1/noticias', { ...base, titulo: 'Mala', categoria: 'Inventada', fechaPublicacion: '2026-02-01' })).status,
+      422,
+    );
   });
 
   test('slugs automáticos únicos para títulos repetidos', async () => {
@@ -184,7 +223,12 @@ describe('Sliders', () => {
     const id = s.body.data.id;
     assert.equal((await h.call(editorAgent, 'post', '/api/v1/sliders', { nombre: 'Duplicado', ubicacion: 'inicio' })).status, 409);
     await h.call(editorAgent, 'post', `/api/v1/sliders/${id}/diapositivas`, { medioId: imageId, titulo: 'Primera' });
-    const two = await h.call(editorAgent, 'post', `/api/v1/sliders/${id}/diapositivas`, { medioId: imageId, titulo: 'Segunda', enlace: '/noticias', textoEnlace: 'Ver' });
+    const two = await h.call(editorAgent, 'post', `/api/v1/sliders/${id}/diapositivas`, {
+      medioId: imageId,
+      titulo: 'Segunda',
+      enlace: '/noticias',
+      textoEnlace: 'Ver',
+    });
     const [a, b] = two.body.data.diapositivas.map((d: { id: number }) => d.id);
     const re = await h.call(editorAgent, 'put', `/api/v1/sliders/${id}/orden`, { orden: [b, a] });
     assert.deepEqual(

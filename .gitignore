@@ -5,3 +5,6 @@ node_modules/
 storage/*
 !storage/.gitkeep
 *.log
+dist/
+test-results/
+*.tsbuildinfo

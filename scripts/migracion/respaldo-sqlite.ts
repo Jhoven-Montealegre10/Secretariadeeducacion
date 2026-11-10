@@ -14,7 +14,9 @@ import { arg, copyVerified, manifest, sha256File } from './archivos';
 
 function counts(db: DatabaseSync): Record<string, number> {
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as Array<{ name: string }>;
-  return Object.fromEntries(tables.map(({ name }) => [name, Number((db.prepare(`SELECT COUNT(*) AS n FROM "${name.replace(/"/g, '')}"`).get() as { n: number }).n)]));
+  return Object.fromEntries(
+    tables.map(({ name }) => [name, Number((db.prepare(`SELECT COUNT(*) AS n FROM "${name.replace(/"/g, '')}"`).get() as { n: number }).n)]),
+  );
 }
 
 function main(): void {
@@ -52,7 +54,13 @@ function main(): void {
     sqlite: { archivo: 'semibague.sqlite', sha256: sha256File(backupFile), integridad: integrity, filas: sourceCounts },
     media: mediaFiles,
     uploads: uploadFiles,
-    verificacion: { integridadSqlite: integrity === 'ok', filasCoinciden: diffs.length === 0, tablasDistintas: diffs, mediaCoincide: mediaOk, uploadsCoincide: uploadsOk },
+    verificacion: {
+      integridadSqlite: integrity === 'ok',
+      filasCoinciden: diffs.length === 0,
+      tablasDistintas: diffs,
+      mediaCoincide: mediaOk,
+      uploadsCoincide: uploadsOk,
+    },
   };
   fs.writeFileSync(path.join(out, 'manifiesto.json'), JSON.stringify(report, null, 2), { mode: 0o600 });
   const ok = report.verificacion.integridadSqlite && report.verificacion.filasCoinciden && mediaOk && uploadsOk;

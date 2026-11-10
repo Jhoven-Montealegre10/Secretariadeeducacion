@@ -18,6 +18,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | Gestionar imágenes y contenido de sliders | Sí | Sí | `sliders.create/update` (agregar, reemplazar, ordenar, activar/desactivar) |
 | Eliminar definitivamente contenidos o archivos | Sí | No | `*.delete` |
 | Consultar la auditoría | Sí | No | `audit.read` |
+| Consultar métricas de operación del servidor | Sí | No | `system.read` |
 | Ver datos personales de PQRSD y responder | Sí | No | `pqrsd.read`, `pqrsd.respond` |
 
 ## Detalle por módulo y acción
@@ -35,6 +36,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | Roles y permisos | Eliminar | `roles.delete` | Sí | No |
 | Estadísticas | Consultar | `stats.read` | Sí | No |
 | Auditoría | Consultar | `audit.read` | Sí | No |
+| Sistema | Consultar métricas de operación | `system.read` | Sí | No |
 | Multimedia | Consultar | `media.read` | Sí | Sí |
 | Multimedia | Subir | `media.upload` | Sí | Sí |
 | Multimedia | Actualizar y reemplazar | `media.update` | Sí | Sí |
@@ -69,3 +71,10 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 - Un editor no puede modificar su rol con una petición manipulada: los esquemas de entrada son estrictos y rechazan campos no permitidos (`422`), y `PATCH /usuarios/{id}` exige `users.update`.
 - Cambiar el rol, los permisos de un rol, desactivar a un usuario, cambiar o recuperar la contraseña, o cambiar el segundo factor **revoca o revalida de inmediato** las sesiones afectadas.
 - Solo un administrador puede desactivar, cambiar de rol o eliminar a otro administrador.
+
+
+## Aplicación técnica (versión 4)
+
+- Guard global de NestJS (`SecurityGuard`): **toda ruta sin declaración se rechaza**; luego límite, acceso o permiso y CSRF.
+- Los servicios vuelven a comprobar el permiso (`authorize`) y las reglas sobre el recurso concreto, por lo que llamar a la API directamente, saltando la interfaz, no evita ninguna regla (probado en `test/integration/authorization.test.ts` y en E2E).
+- El permiso `system.read` es nuevo; la migración `DatosIniciales` lo asigna al rol Administrador. Al migrar desde la versión 3, la herramienta agrega al rol Administrador los permisos nuevos (hoy `system.read`), porque ese rol no se puede editar desde el panel; el informe de migración lo registra en `permisosAgregadosAlAdministrador`.

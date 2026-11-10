@@ -64,13 +64,18 @@ describe('Carga de archivos', () => {
   });
 
   test('rechaza una solicitud cuyo tamaño total supera el máximo, antes de leerla', async () => {
-    const files: Array<[Buffer, string]> = [0, 1].map((i) => [Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(14 * 1024 * 1024)]), `grande${i}.jpg`]);
+    const files: Array<[Buffer, string]> = [0, 1].map((i) => [
+      Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(14 * 1024 * 1024)]),
+      `grande${i}.jpg`,
+    ]);
     assert.equal((await uploadReq(editorAgent, files)).status, 413);
   });
 
   test('una imagen dañada con cabecera válida se rechaza y no deja archivos huérfanos', async () => {
     const before = fs.readdirSync(h.config.mediaDir).length;
-    const res = await uploadReq(editorAgent, [[Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from('basura que no es imagen'.repeat(5))]), 'rota.jpg']]);
+    const res = await uploadReq(editorAgent, [
+      [Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from('basura que no es imagen'.repeat(5))]), 'rota.jpg'],
+    ]);
     assert.equal(res.status, 422);
     assert.equal(fs.readdirSync(h.config.mediaDir).length, before);
   });
@@ -128,7 +133,10 @@ describe('Acceso a archivos', () => {
 
   test('reemplazar conserva el ID y exige confirmación si está en uso; no permite cambiar de tipo', async () => {
     const m = (await uploadReq(editorAgent, [[await pngBuffer(), 'banner.png']])).body.data[0];
-    const rep = await editorAgent.put(`/api/v1/medios/${m.id}/archivo`).set('X-CSRF-Token', String(editorAgent.csrf)).attach('archivo', await jpegBuffer(), 'nuevo.jpg');
+    const rep = await editorAgent
+      .put(`/api/v1/medios/${m.id}/archivo`)
+      .set('X-CSRF-Token', String(editorAgent.csrf))
+      .attach('archivo', await jpegBuffer(), 'nuevo.jpg');
     assert.equal(rep.status, 200, JSON.stringify(rep.body));
     assert.equal(rep.body.data.id, m.id);
     assert.equal(rep.body.data.mime, 'image/jpeg');
@@ -146,6 +154,10 @@ describe('Acceso a archivos', () => {
     assert.equal(res.body.meta.pageSize, 5);
     assert.equal((await editorAgent.get('/api/v1/medios').query({ q: '100%_\\' })).status, 200, 'los comodines de búsqueda se tratan literalmente');
     assert.equal((await editorAgent.get('/api/v1/medios').query({ pageSize: 1000 })).status, 422, 'límite máximo de paginación');
-    assert.equal((await editorAgent.get('/api/v1/medios').query({ sort: 'archivo; DROP TABLE medios' })).status, 422, 'el orden solo acepta valores de la lista blanca');
+    assert.equal(
+      (await editorAgent.get('/api/v1/medios').query({ sort: 'archivo; DROP TABLE medios' })).status,
+      422,
+      'el orden solo acepta valores de la lista blanca',
+    );
   });
 });

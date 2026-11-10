@@ -142,7 +142,9 @@ describe('Primer ingreso: configuración obligatoria del segundo factor', () => 
 
     const enc = await h.db.scalar<string>('SELECT mfa_secreto_enc FROM usuarios WHERE id = $1', [u.id]);
     assert.ok(!enc.includes(secret), 'el secreto TOTP se guarda cifrado');
-    const stored = (await h.db.query<{ codigo_hash: string }>('SELECT codigo_hash FROM codigos_recuperacion WHERE usuario_id = $1', [u.id])).map((r) => r.codigo_hash);
+    const stored = (await h.db.query<{ codigo_hash: string }>('SELECT codigo_hash FROM codigos_recuperacion WHERE usuario_id = $1', [u.id])).map(
+      (r) => r.codigo_hash,
+    );
     assert.ok(!stored.some((x) => codes.some((c) => x.includes(c.replace('-', '')))), 'los códigos se guardan como hash');
 
     const r1 = await passwordStep(u.email, PASSWORD);
@@ -248,7 +250,10 @@ describe('Recuperación de acceso', () => {
     const nueva = 'girasoles en la ventana del colegio';
     const ok = await agent.post('/api/v1/auth/recuperacion/restablecer').set('X-CSRF-Token', token).send({ token: resetToken, password: nueva });
     assert.equal(ok.status, 200);
-    const again = await agent.post('/api/v1/auth/recuperacion/restablecer').set('X-CSRF-Token', token).send({ token: resetToken, password: 'otra frase distinta y larga' });
+    const again = await agent
+      .post('/api/v1/auth/recuperacion/restablecer')
+      .set('X-CSRF-Token', token)
+      .send({ token: resetToken, password: 'otra frase distinta y larga' });
     assert.equal(again.status, 422, 'el token no se puede reutilizar');
     assert.equal((await session.get('/api/v1/auth/sesion')).status, 401, 'las sesiones anteriores se revocan');
 
@@ -264,7 +269,10 @@ describe('Recuperación de acceso', () => {
     await agent.post('/api/v1/auth/recuperacion').set('X-CSRF-Token', token).send({ email: u.email });
     const resetToken = String(/#token=([\w-]+)/.exec(h.mailer.outbox[0].text)?.[1]);
     await h.db.run("UPDATE tokens_recuperacion SET expira_en = now() - interval '1 second' WHERE usuario_id = $1", [u.id]);
-    const res = await agent.post('/api/v1/auth/recuperacion/restablecer').set('X-CSRF-Token', token).send({ token: resetToken, password: 'otra frase suficientemente larga' });
+    const res = await agent
+      .post('/api/v1/auth/recuperacion/restablecer')
+      .set('X-CSRF-Token', token)
+      .send({ token: resetToken, password: 'otra frase suficientemente larga' });
     assert.equal(res.status, 422);
   });
 });

@@ -1,6 +1,7 @@
 # API REST v1
 
-- Especificación OpenAPI 3.1 exportable: `docs/openapi.json` (completa) y `docs/openapi-publica.json` (pública).
+- Generada con `@nestjs/swagger` desde los mismos esquemas Zod que validan cada ruta (decorador `@Endpoint`).
+- Especificación OpenAPI 3.0 exportable: `docs/openapi.json` (completa) y `docs/openapi-publica.json` (pública).
 - Swagger UI: **`/api/docs`** (solo operaciones públicas, abierta) y **`/admin/api-docs`** (completa, requiere sesión del panel).
 - Regenerar después de cambiar endpoints: `npm run openapi:export`. Verificar sincronía: `npm run openapi:check`.
 
@@ -11,7 +12,7 @@
 | Público | `/api/v1/public/*` | Sin autenticación. Solo contenido **publicado** y solo campos aptos para visitantes (noticias, páginas, sliders, normatividad, instituciones). Solo `GET`. |
 | Autenticación | `/api/v1/auth/*` | Inicio de sesión en dos pasos, recuperación, cierre de sesión. |
 | Mi cuenta | `/api/v1/cuenta/*` | Usuario autenticado sobre su propia cuenta. |
-| Administración | `/api/v1/{usuarios,roles,permisos,medios,paginas,noticias,sliders,documentos,pqrsd,estadisticas,auditoria}` | Sesión con segundo factor + permiso por módulo/acción (ver `docs/PERMISOS.md`). |
+| Administración | `/api/v1/{usuarios,roles,permisos,medios,paginas,noticias,sliders,documentos,pqrsd,estadisticas,auditoria,sistema}` | Sesión con segundo factor + permiso por módulo/acción (ver `docs/PERMISOS.md`). |
 
 ## Autenticación para el panel
 
@@ -28,13 +29,23 @@ permisos, contraseña, segundo factor o al desactivar al usuario.
 ## Convenciones
 
 - **Respuesta:** `{ "data": ... }` o, en listados, `{ "data": [...], "meta": { page, pageSize, total, totalPages } }`.
-- **Error:** `{ "error": { "code", "message", "details"?: [{ campo, mensaje }], "requestId" } }` con códigos 400, 401, 403, 404, 409, 413, 422, 429, 500.
+- **Error:** `{ "error": { "code", "message", "details"?: [{ campo, mensaje }], "requestId" } }` con códigos 400, 401, 403, 404, 409, 413, 422, 429, 500 y 503 (`SERVICE_BUSY`: base de datos ocupada; reintente según `Retry-After`).
 - **Paginación:** `page` (≥ 1), `pageSize` (1–100; la API pública máx. 50). **Orden:** `sort=campo` o `sort=-campo`, solo valores listados en la especificación. **Búsqueda:** `q`.
 - **Validación:** todas las entradas se validan con esquemas estrictos (campos desconocidos → 422). Las salidas son DTO explícitos: nunca se devuelven hashes, secretos MFA, tokens ni datos internos.
 - **GET nunca modifica datos.**
 - **Conflictos:** duplicados, recursos en uso, último administrador → `409` con `details`. Las operaciones compuestas son transaccionales.
+- **Ediciones simultáneas (desde 1.1, compatible):** usuarios, roles, medios, páginas, noticias y sliders devuelven
+  `version`. Envíela en `PUT/PATCH` (en sliders también al agregar, editar, ordenar o eliminar diapositivas; en el DELETE
+  de diapositiva como `?version=`). Si otra persona guardó antes: `409` con `code: "EDIT_CONFLICT"` y
+  `details.versionActual`; recargue antes de volver a guardar. Sin `version`, el último guardado prevalece (clientes antiguos).
 - **Archivos:** `multipart/form-data` (campos `archivos` para multimedia —hasta 10— y `archivo` para reemplazos y PDF).
 - **Límites:** 600 peticiones/15 min por IP en la API; login 10/15 min; MFA 10/15 min; recuperación 5/h; cargas 60/h; cuerpo JSON 100 KB (páginas 1 MB, noticias 512 KB); imágenes 8 MB, audio 20 MB, PDF 10 MB.
+
+## Operación
+
+- `GET /api/v1/sistema/metricas` (permiso `system.read`): latencia y errores por ruta, pool de PostgreSQL, memoria, CPU y caché.
+- `GET /health/live` y `/health/ready` (fuera de `/api`, sin datos sensibles).
+- Respuestas privadas con `Cache-Control: no-store`; las públicas pueden almacenarse en caché por el navegador o un CDN.
 
 ## Política de versionado y compatibilidad
 

@@ -76,17 +76,40 @@ async function buildLegacy(dataKey: string): Promise<void> {
     INSERT INTO visitas (id, fecha, ruta, visitante, fuente, dispositivo) VALUES (1, '2025-03-01', '/', 'abc', 'directo', 'movil'), (2, '2025-03-01', '/noticias', 'abc', 'buscador', 'movil');
     INSERT INTO sales_estadisticas (fecha, sal) VALUES ('2025-03-01', 'sal-ficticia');
   `);
-  db.prepare("INSERT INTO documentos (id, tipo, numero, anio, fecha, asunto, archivo, nombre_original, tamano, autor_id, creado_en) VALUES (4, 'circular', '001', 2025, '2025-02-01', 'Circular ficticia', ?, 'c.pdf', 30, 3, '2025-02-01 10:00:00')").run(pdf);
+  db.prepare(
+    "INSERT INTO documentos (id, tipo, numero, anio, fecha, asunto, archivo, nombre_original, tamano, autor_id, creado_en) VALUES (4, 'circular', '001', 2025, '2025-02-01', 'Circular ficticia', ?, 'c.pdf', 30, 3, '2025-02-01 10:00:00')",
+  ).run(pdf);
   db.prepare(
     `INSERT INTO pqrsd (id, radicado, tipo, estado, tipo_documento, documento_hash, documento_enc, nombre_enc, email_enc, telefono_enc, asunto_enc, mensaje_enc, creado_en, actualizado_en)
      VALUES (6, 'SEM-2025-00000006', 'Petición', 'Radicada', 'Cédula de ciudadanía', ?, ?, ?, ?, NULL, ?, ?, '2025-03-03 10:00:00', '2025-03-03 10:00:00')`,
-  ).run(c.blindIndex('1234567'), c.encrypt('1234567'), c.encrypt('Persona Ficticia'), c.encrypt('ficticia@example.com'), c.encrypt('Asunto ficticio'), c.encrypt('Mensaje ficticio de prueba'));
-  db.prepare("INSERT INTO tokens_recuperacion (id, usuario_id, token_hash, expira_en, creado_en) VALUES (2, 12, 'hash-ficticio', ?, '2025-03-01 10:00:00')").run(Date.now() - 1000);
+  ).run(
+    c.blindIndex('1234567'),
+    c.encrypt('1234567'),
+    c.encrypt('Persona Ficticia'),
+    c.encrypt('ficticia@example.com'),
+    c.encrypt('Asunto ficticio'),
+    c.encrypt('Mensaje ficticio de prueba'),
+  );
+  db.prepare(
+    "INSERT INTO tokens_recuperacion (id, usuario_id, token_hash, expira_en, creado_en) VALUES (2, 12, 'hash-ficticio', ?, '2025-03-01 10:00:00')",
+  ).run(Date.now() - 1000);
   // Cadena de auditoría válida con la clave del sistema.
   let previous = 'genesis';
-  const ins = db.prepare('INSERT INTO auditoria_eventos (id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const ins = db.prepare(
+    'INSERT INTO auditoria_eventos (id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  );
   for (let i = 1; i <= 5; i++) {
-    const row = { usuarioId: 3, usuarioEmail: 'admin.migrado@example.gov.co', accion: 'login', recurso: 'usuario', recursoId: '3', resultado: 'exito', detalle: `evento ${i}`, ipHash: 'abc', creadoEn: `2025-03-0${i} 10:00:00` };
+    const row = {
+      usuarioId: 3,
+      usuarioEmail: 'admin.migrado@example.gov.co',
+      accion: 'login',
+      recurso: 'usuario',
+      recursoId: '3',
+      resultado: 'exito',
+      detalle: `evento ${i}`,
+      ipHash: 'abc',
+      creadoEn: `2025-03-0${i} 10:00:00`,
+    };
     const hsh = c.auditChainHash(previous, row);
     ins.run(i, row.usuarioId, row.usuarioEmail, row.accion, row.recurso, row.recursoId, row.resultado, row.detalle, row.ipHash, row.creadoEn, previous, hsh);
     previous = hsh;
@@ -96,7 +119,10 @@ async function buildLegacy(dataKey: string): Promise<void> {
 }
 
 function runTool(args: string[], env: NodeJS.ProcessEnv) {
-  return spawnSync(process.execPath, [path.join(ROOT, 'dist/scripts/migracion/sqlite-a-postgres.js'), ...args], { env: { PATH: process.env.PATH ?? '', ...env }, encoding: 'utf8' });
+  return spawnSync(process.execPath, [path.join(ROOT, 'dist/scripts/migracion/sqlite-a-postgres.js'), ...args], {
+    env: { PATH: process.env.PATH ?? '', ...env },
+    encoding: 'utf8',
+  });
 }
 
 before(async () => {
@@ -111,7 +137,9 @@ after(async () => {
 describe('Respaldo previo', () => {
   test('el respaldo copia la base y los archivos y verifica la restauración', () => {
     const dest = path.join(work, 'respaldos');
-    const r = spawnSync(process.execPath, [path.join(ROOT, 'dist/scripts/migracion/respaldo-sqlite.js'), '--sqlite', sqliteFile, '--destino', dest], { encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'dist/scripts/migracion/respaldo-sqlite.js'), '--sqlite', sqliteFile, '--destino', dest], {
+      encoding: 'utf8',
+    });
     assert.equal(r.status, 0, r.stderr);
     const dir = path.join(dest, fs.readdirSync(dest)[0]);
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'manifiesto.json'), 'utf8'));
@@ -140,7 +168,10 @@ describe('Migración', () => {
   });
 
   test('con una clave de cifrado distinta la verificación falla y el destino queda sin cambios', () => {
-    const r = runTool(['--sqlite', sqliteFile, '--media', path.join(work, 'media'), '--uploads', path.join(work, 'uploads')], { ...env, DATA_ENCRYPTION_KEY: crypto.randomBytes(32).toString('base64') });
+    const r = runTool(['--sqlite', sqliteFile, '--media', path.join(work, 'media'), '--uploads', path.join(work, 'uploads')], {
+      ...env,
+      DATA_ENCRYPTION_KEY: crypto.randomBytes(32).toString('base64'),
+    });
     assert.notEqual(r.status, 0);
     assert.match(r.stdout + r.stderr, /FALLÓ|revirtió/);
   });
@@ -161,15 +192,23 @@ describe('Migración', () => {
     assert.ok(rep.tablas.every((t: { coincide: boolean }) => t.coincide));
     assert.equal(rep.auditoria.cadenaIntegra, true);
     assert.ok(rep.noMigradas.sesiones);
+    assert.deepEqual(rep.permisosAgregadosAlAdministrador, ['system.read'], 'el rol del sistema recibe los permisos nuevos');
+    assert.equal(await h.db.scalar("SELECT COUNT(*) FROM rol_permisos WHERE rol_id = 1 AND permiso = 'system.read'"), 1);
 
-    const u = await h.db.one<{ id: number; email: string; activo: boolean; bloqueado_hasta: string | null }>("SELECT id, email, activo, bloqueado_hasta FROM usuarios WHERE id = 12");
+    const u = await h.db.one<{ id: number; email: string; activo: boolean; bloqueado_hasta: string | null }>(
+      'SELECT id, email, activo, bloqueado_hasta FROM usuarios WHERE id = 12',
+    );
     assert.equal(u?.email, 'editora@example.gov.co');
     assert.equal(u?.activo, true, 'entero 1 → boolean');
     assert.ok(u?.bloqueado_hasta, 'milisegundos → timestamptz');
     assert.equal(await h.db.scalar('SELECT email FROM usuarios WHERE id = 3'), 'admin.migrado@example.gov.co', 'correo normalizado');
-    assert.equal(await h.db.scalar("SELECT jsonb_typeof(bloques) FROM paginas WHERE id = 1"), 'array', 'texto JSON → jsonb');
+    assert.equal(await h.db.scalar('SELECT jsonb_typeof(bloques) FROM paginas WHERE id = 1'), 'array', 'texto JSON → jsonb');
     assert.equal(await h.db.scalar('SELECT imagen_id FROM noticias WHERE id = 90'), 40, 'la relación con el medio se conserva');
-    assert.equal(await h.db.scalar("SELECT to_char(creado_en AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') FROM noticias WHERE id = 90"), '2025-03-02 09:00:00', 'hora UTC conservada');
+    assert.equal(
+      await h.db.scalar("SELECT to_char(creado_en AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') FROM noticias WHERE id = 90"),
+      '2025-03-02 09:00:00',
+      'hora UTC conservada',
+    );
     assert.equal(await h.db.scalar('SELECT COUNT(*) FROM sesiones'), 0, 'las sesiones no se migran');
     assert.ok(fs.existsSync(path.join(h.config.mediaDir, String(await h.db.scalar('SELECT archivo FROM medios WHERE id = 40')))));
 
@@ -197,7 +236,10 @@ describe('Migración', () => {
     const token = await h.csrf(agent);
     const r1 = await agent.post('/api/v1/auth/login').set('X-CSRF-Token', token).send({ email: 'ADMIN.MIGRADO@example.gov.co', password: PASSWORD });
     assert.equal(r1.status, 200, JSON.stringify(r1.body));
-    const r2 = await agent.post('/api/v1/auth/mfa/verificar').set('X-CSRF-Token', r1.body.data.csrfToken).send({ codigo: h.totp.generate(mfaSecret) });
+    const r2 = await agent
+      .post('/api/v1/auth/mfa/verificar')
+      .set('X-CSRF-Token', r1.body.data.csrfToken)
+      .send({ codigo: h.totp.generate(mfaSecret) });
     assert.equal(r2.status, 200, JSON.stringify(r2.body));
     agent.csrf = r2.body.data.csrfToken;
     const pq = await h.call(agent, 'get', '/api/v1/pqrsd/6');

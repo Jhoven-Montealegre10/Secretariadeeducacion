@@ -59,7 +59,9 @@ export class RateLimiter implements OnModuleDestroy {
 
   private limitFor(bucket: keyof typeof LIMITS): number {
     // En pruebas se puede bajar el límite para verificar el bloqueo (TEST_RATE_LIMIT).
-    return this.config.isTest ? Number(process.env.TEST_RATE_LIMIT ?? 10_000) : LIMITS[bucket].limit;
+    if (!this.config.isTest) return LIMITS[bucket].limit;
+    const env = LIMITS[bucket].shared ? process.env.TEST_RATE_LIMIT : process.env.TEST_RATE_LIMIT_GENERAL;
+    return Number(env ?? 10_000);
   }
 
   private sweep(): void {

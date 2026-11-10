@@ -25,13 +25,35 @@ const auditSvc = audit as unknown as AuditService;
 const cache = fake<PublicCache>({ invalidate: () => undefined, get: async <R>(_k: string, l: () => Promise<R>) => l() });
 
 function actor(perms: readonly string[], over: Partial<Actor> = {}): Actor {
-  return { id: 1, email: 'a@example.gov.co', nombre: 'A', rolId: 1, rolSlug: 'administrador', rolNombre: 'Administrador', permisos: new Set(perms), authVersion: 1, ...over };
+  return {
+    id: 1,
+    email: 'a@example.gov.co',
+    nombre: 'A',
+    rolId: 1,
+    rolSlug: 'administrador',
+    rolNombre: 'Administrador',
+    permisos: new Set(perms),
+    authVersion: 1,
+    ...over,
+  };
 }
 const ADMIN = actor(TODOS);
 const EDITOR = actor(PERMISOS_EDITOR, { id: 2, rolId: 2, rolSlug: 'editor', rolNombre: 'Editor' });
 
 function role(id: number, slug: string, permisos: readonly string[], extra: Partial<RoleRecord> = {}): RoleRecord {
-  return { id, slug, nombre: slug, descripcion: '', sistema: false, version: 1, creadoEn: '', actualizadoEn: '', totalUsuarios: 0, permisos: [...permisos], ...extra };
+  return {
+    id,
+    slug,
+    nombre: slug,
+    descripcion: '',
+    sistema: false,
+    version: 1,
+    creadoEn: '',
+    actualizadoEn: '',
+    totalUsuarios: 0,
+    permisos: [...permisos],
+    ...extra,
+  };
 }
 function user(id: number, over: Partial<UserRecord> = {}): UserRecord {
   return {
@@ -83,7 +105,11 @@ describe('UserService', () => {
         return 9;
       },
       update: async (id: number, f: Partial<UserRecord>) => {
-        users.set(id, { ...(users.get(id) as UserRecord), ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)), version: (users.get(id)?.version ?? 0) + 1 });
+        users.set(id, {
+          ...(users.get(id) as UserRecord),
+          ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)),
+          version: (users.get(id)?.version ?? 0) + 1,
+        });
         return 1;
       },
       countActiveAdmins: async (exclude: number) => [...users.values()].filter((u) => u.rolSlug === 'administrador' && u.activo && u.id !== exclude).length,
@@ -186,9 +212,26 @@ describe('RoleService', () => {
 });
 
 describe('PageService y NewsService: publicación', () => {
-  const page: PageRecord = { id: 3, slug: 'x', titulo: 'X', resumen: '', bloques: [], estado: 'publicada', sistema: false, creadoPor: 1, actualizadoPor: 1, publicadaEn: null, version: 2, creadoEn: '', actualizadoEn: '' };
+  const page: PageRecord = {
+    id: 3,
+    slug: 'x',
+    titulo: 'X',
+    resumen: '',
+    bloques: [],
+    estado: 'publicada',
+    sistema: false,
+    creadoPor: 1,
+    actualizadoPor: 1,
+    publicadaEn: null,
+    version: 2,
+    creadoEn: '',
+    actualizadoEn: '',
+  };
   const media = fake<MediaService>({ assertUsable: async () => undefined, syncUsages: async () => undefined, clearUsages: async () => undefined });
-  const sanitizer = fake<HtmlSanitizer>({ sanitizeRichText: (h: string) => h.replace(/<script.*?<\/script>/g, ''), stripTags: (h: string) => h.replace(/<[^>]+>/g, '') });
+  const sanitizer = fake<HtmlSanitizer>({
+    sanitizeRichText: (h: string) => h.replace(/<script.*?<\/script>/g, ''),
+    stripTags: (h: string) => h.replace(/<[^>]+>/g, ''),
+  });
   const pages = new PageService(
     fakeDb,
     fake<PageRepository>({ findById: async () => page, slugExists: async () => false, update: async () => 1 }),
@@ -210,11 +253,14 @@ describe('PageService y NewsService: publicación', () => {
   });
 
   test('bloques inválidos → 422 con el campo exacto', async () => {
-    await assert.rejects(pages.update(ADMIN, 3, { bloques: [{ tipo: 'boton', texto: 'x', enlace: 'javascript:x' }] }, null), (e: { status: number; details: Array<{ campo: string }> }) => {
-      assert.equal(e.status, 422);
-      assert.match(e.details[0].campo, /^bloques\.0/);
-      return true;
-    });
+    await assert.rejects(
+      pages.update(ADMIN, 3, { bloques: [{ tipo: 'boton', texto: 'x', enlace: 'javascript:x' }] }, null),
+      (e: { status: number; details: Array<{ campo: string }> }) => {
+        assert.equal(e.status, 422);
+        assert.match(e.details[0].campo, /^bloques\.0/);
+        return true;
+      },
+    );
   });
 
   test('noticia: categoría inválida y contenido muy corto → 422; crear publicada sin news.publish → 403', async () => {
@@ -223,7 +269,10 @@ describe('PageService y NewsService: publicación', () => {
     await assert.rejects(news.create(ADMIN, { ...base, categoria: 'Inventada', contenido: '<p>Contenido suficientemente largo</p>' }, null), { status: 422 });
     await assert.rejects(news.create(ADMIN, { ...base, categoria: 'Cobertura', contenido: '<p>corto</p><script>x</script>' }, null), { status: 422 });
     const sinPublicar = actor(['dashboard.access', 'news.create'], { id: 4 });
-    await assert.rejects(news.create(sinPublicar, { ...base, estado: 'publicada', categoria: 'Cobertura', contenido: '<p>Contenido suficientemente largo</p>' }, null), { status: 403 });
+    await assert.rejects(
+      news.create(sinPublicar, { ...base, estado: 'publicada', categoria: 'Cobertura', contenido: '<p>Contenido suficientemente largo</p>' }, null),
+      { status: 403 },
+    );
   });
 });
 
