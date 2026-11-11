@@ -30,10 +30,15 @@ export function normalizeError(err: unknown): AppError {
   if (err instanceof HttpException) {
     const status = err.getStatus();
     if (status === 404) return new AppError('El recurso no existe.', { status: 404, code: 'NOT_FOUND' });
+    if (status === 413) return new AppError('La solicitud supera el tamaño permitido.', { status: 413, code: 'PAYLOAD_TOO_LARGE' });
     if (status === 405) return new AppError('Método no permitido.', { status: 405, code: 'METHOD_NOT_ALLOWED' });
     if (status < 500) return new AppError('La solicitud no es válida.', { status, code: 'BAD_REQUEST' });
   }
   const code = pgCode(err);
+  // Texto con bytes no representables (p. ej. NUL) o fechas/valores fuera de rango: es un error del cliente, no del servidor.
+  if (code === PG.INVALID_TEXT || code === PG.UNTRANSLATABLE || code === PG.INVALID_DATETIME || code === PG.DATETIME_OVERFLOW) {
+    return new AppError('La solicitud contiene datos no válidos.', { status: 400, code: 'BAD_REQUEST' });
+  }
   const message = String(e?.message ?? '');
   if (
     code === PG.QUERY_CANCELED ||

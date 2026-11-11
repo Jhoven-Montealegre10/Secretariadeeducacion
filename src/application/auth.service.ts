@@ -56,9 +56,9 @@ export class AuthService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  checkPolicy(password: string, user?: Pick<UserRecord, 'email' | 'nombre'> | null): void {
+  checkPolicy(password: string, user?: Pick<UserRecord, 'email' | 'nombre'> | null, campo = 'password'): void {
     const error = validarPassword(password, this.strength.evaluate, [user?.email, user?.nombre, user?.email?.split('@')[0]]);
-    if (error) throw new ValidationError(error, [{ campo: 'password', mensaje: error }]);
+    if (error) throw new ValidationError(error, [{ campo, mensaje: error }]);
   }
 
   private async issueResetToken(user: UserRecord, ttlMs: number, kind: 'invitacion' | 'recuperacion'): Promise<void> {
@@ -216,7 +216,8 @@ export class AuthService {
       await this.audit.record({ actor: user, accion: 'cambiar_password', recurso: 'usuario', recursoId: userId, resultado: 'fallo', ip });
       throw new ValidationError('La contraseña actual no es correcta.', [{ campo: 'actual', mensaje: 'Incorrecta' }]);
     }
-    this.checkPolicy(nueva, user);
+    if (nueva === actual) throw new ValidationError('La contraseña nueva debe ser distinta de la actual.', [{ campo: 'nueva', mensaje: 'Igual a la actual' }]);
+    this.checkPolicy(nueva, user, 'nueva');
     const hash = await this.hasher.hash(nueva);
     await this.db.transaction(async () => {
       await this.users.setPasswordHash(user.id, hash);

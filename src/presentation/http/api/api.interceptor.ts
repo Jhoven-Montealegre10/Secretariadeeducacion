@@ -72,10 +72,14 @@ export class ApiInterceptor implements NestInterceptor {
       return Promise.reject(new PayloadTooLargeError(`La carga supera el máximo de ${Math.round(maxRequest / 1048576)} MB por envío.`));
     }
     const maxBytes = upload.maxBytes(this.config);
-    const m = multer({
+    // defParamCharset existe en multer 2 aunque sus tipos aún no lo declaran.
+    const options: multer.Options & { defParamCharset: string } = {
       storage: multer.memoryStorage(),
+      // Nombres de archivo en UTF-8 (ñ, tildes); por omisión multer los leería como latin1.
+      defParamCharset: 'utf8',
       limits: { fileSize: maxBytes, files: upload.maxFiles, fields: 20, fieldSize: 20 * 1024, parts: upload.maxFiles + 20 },
-    });
+    };
+    const m = multer(options);
     const handler = upload.maxFiles > 1 ? m.array(upload.field, upload.maxFiles) : m.single(upload.field);
     return new Promise((resolve, reject) => {
       handler(req, res, (err?: unknown) => {

@@ -8,7 +8,11 @@ export const IdParams = z.object({ id: Id.meta({ example: 12 }) });
 export const Fecha = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use el formato AAAA-MM-DD')
-  .refine((v) => !Number.isNaN(Date.parse(v)), 'Fecha inválida');
+  .refine((v) => {
+    // Rechaza fechas inexistentes como 2026-02-30 (Date.parse las desplaza al mes siguiente).
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  }, 'Fecha inválida');
 export const FechaHora = z.string().meta({ example: '2026-11-10 14:32:05', description: 'Fecha y hora UTC' });
 export const Estado = z.enum(['borrador', 'publicada']).meta({ example: 'publicada' });
 /** Versión para el bloqueo optimista (opcional por compatibilidad con clientes anteriores). */

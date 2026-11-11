@@ -11,6 +11,7 @@ import express, { type NextFunction, type Response } from 'express';
 import session from 'express-session';
 import swaggerUiDist from 'swagger-ui-dist';
 import { AuthService } from '../../application/auth.service';
+import { ValidationError } from '../../domain/errors';
 import { StatsService } from '../../application/stats.service';
 import { APP_CONFIG, type AppConfig } from '../../config/configuration';
 import { SITE } from '../../config/site';
@@ -53,6 +54,17 @@ export async function configureApp(app: NestExpressApplication): Promise<PgSessi
   // Cuerpos: JSON solo en la API (límite global 1 MB; cada ruta tiene el suyo), formularios pequeños en el sitio.
   app.use('/api', express.json({ limit: '1mb', strict: true }));
   app.use(express.urlencoded({ extended: false, limit: '20kb', parameterLimit: 30 }));
+
+  // El byte NUL no es válido en texto de PostgreSQL ni tiene uso legítimo en el portal: se rechaza antes de la BD.
+  app.use((req: AppRequest, res: Response, next: NextFunction) => {
+    const hasNul = (v: unknown): boolean =>
+      typeof v === 'string' ? v.includes('\u0000') : Array.isArray(v) ? v.some(hasNul) : !!v && typeof v === 'object' && Object.values(v).some(hasNul);
+    // En la ruta no se revisa: un NUL ahí nunca coincide con un recurso y termina en 404.
+    if (hasNul(req.query) || hasNul(req.body)) {
+      return next(new ValidationError('La solicitud contiene caracteres no válidos.'));
+    }
+    next();
+  });
 
   const store = new PgSessionStore(app.get(Db), app.get(CryptoService), config.session.idleMs);
   app.use(

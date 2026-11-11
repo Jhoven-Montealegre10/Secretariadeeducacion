@@ -30,6 +30,10 @@ export const PG = {
   DEADLOCK: '40P01',
   LOCK_TIMEOUT: '55P03',
   QUERY_CANCELED: '57014',
+  INVALID_TEXT: '22021',
+  UNTRANSLATABLE: '22P05',
+  INVALID_DATETIME: '22007',
+  DATETIME_OVERFLOW: '22008',
 } as const;
 
 export function pgCode(err: unknown): string | undefined {
@@ -39,7 +43,7 @@ export function pgCode(err: unknown): string | undefined {
 }
 
 /** Claves de bloqueos consultivos (constantes para no colisionar). */
-export const LOCKS = { AUDIT_CHAIN: 7_310_001, STATS_PURGE: 7_310_002, SESSION_PURGE: 7_310_003, TOKEN_PURGE: 7_310_004 } as const;
+export const LOCKS = { AUDIT_CHAIN: 7_310_001, STATS_PURGE: 7_310_002, SESSION_PURGE: 7_310_003, TOKEN_PURGE: 7_310_004, USER_ADMIN: 7_310_005 } as const;
 
 @Injectable()
 export class Db {

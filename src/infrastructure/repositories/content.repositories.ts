@@ -179,7 +179,10 @@ export class MediaRepository {
     return (
       (await this.db.scalar<number>(
         `SELECT COUNT(*) FROM medios m WHERE m.id = $1 AND (m.visibilidad = 'publica'
-         OR EXISTS (SELECT 1 FROM medios_usos mu WHERE mu.medio_id = m.id AND mu.publicado))`,
+         OR EXISTS (SELECT 1 FROM medios_usos mu
+                    LEFT JOIN noticias n ON mu.entidad = 'noticia' AND n.id = mu.entidad_id
+                    WHERE mu.medio_id = m.id AND mu.publicado
+                      AND (mu.entidad <> 'noticia' OR n.fecha_publicacion <= (now() AT TIME ZONE 'America/Bogota')::date)))`,
         [id],
       )) > 0
     );

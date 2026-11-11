@@ -61,7 +61,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | PQRSD | Consultar datos personales | `pqrsd.read` | Sí | No |
 | PQRSD | Responder | `pqrsd.respond` | Sí | No |
 
-## Reglas adicionales (verificadas con pruebas en `tests/authorization.test.js`)
+## Reglas adicionales (verificadas con pruebas en `test/integration/authorization.test.ts` y `test/integration/qa-regresion.test.ts`)
 
 - El rol **Administrador** es del sistema: no se elimina y sus permisos no se modifican.
 - El administrador puede crear **roles adicionales** con permisos explícitos por módulo y acción.

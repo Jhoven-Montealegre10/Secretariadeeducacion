@@ -41,7 +41,8 @@ const ctx = {
 
 function routeFor(pathname) {
   const sorted = [...MENU].sort((a, b) => b.path.length - a.path.length);
-  return sorted.find((r) => pathname === r.path || pathname.startsWith(`${r.path}/`));
+  // El resumen (/admin) solo responde a su ruta exacta: /admin/<algo-inexistente> no debe mostrarlo.
+  return sorted.find((r) => pathname === r.path || (r.path !== '/admin' && pathname.startsWith(`${r.path}/`)));
 }
 
 function renderMenu(pathname) {

@@ -412,6 +412,10 @@ async function main(): Promise<void> {
       `estados: ${r.join(',')}`,
     );
   });
+  await step('Panel', 'QA-11: una sección inexistente del panel no muestra el Resumen', ep, async () => {
+    await ep.goto(`${base}/admin/esta-seccion-no-existe`);
+    await ep.waitForSelector('h1:has-text("Sin acceso")');
+  });
   await ed.close();
 
   // --- Sitio público ---
@@ -520,6 +524,20 @@ async function main(): Promise<void> {
     await ctx.close();
   }
 
+  await step('Accesibilidad', 'QA-06: Escape cierra el submenú y actualiza aria-expanded', pp, async () => {
+    await pp.goto(`${base}/`);
+    const btn = pp.locator('#menu-principal .nav-btn', { hasText: 'La Secretaría' });
+    await btn.click();
+    assert((await btn.getAttribute('aria-expanded')) === 'true', 'abierto');
+    await pp.keyboard.press('Escape');
+    assert((await btn.getAttribute('aria-expanded')) === 'false', 'aria-expanded tras Escape');
+  });
+  await step('Accesibilidad', 'QA-16: el enlace "Saltar al contenido" mueve el foco al contenido principal', pp, async () => {
+    await pp.goto(`${base}/`);
+    await pp.keyboard.press('Tab');
+    await pp.keyboard.press('Enter');
+    assert((await pp.evaluate(() => document.activeElement?.id)) === 'contenido', 'foco en <main>');
+  });
   await step('Accesibilidad', 'navegación por teclado: enlace para saltar al contenido y foco visible', pp, async () => {
     await pp.goto(`${base}/`);
     await pp.keyboard.press('Tab');

@@ -19,7 +19,7 @@ import type { PasswordHasher } from '../../src/infrastructure/security/password-
 
 const fake = <T>(o: Partial<Record<keyof T, unknown>>): T => o as unknown as T;
 
-const fakeDb = fake<Db>({ transaction: async <R>(fn: () => Promise<R>) => fn(), afterCommit: () => undefined });
+const fakeDb = fake<Db>({ transaction: async <R>(fn: () => Promise<R>) => fn(), afterCommit: () => undefined, advisoryXactLock: async () => undefined });
 const audit = { events: [] as string[], record: async (e: { accion: string }) => void audit.events.push(e.accion) };
 const auditSvc = audit as unknown as AuditService;
 const cache = fake<PublicCache>({ invalidate: () => undefined, get: async <R>(_k: string, l: () => Promise<R>) => l() });
@@ -288,6 +288,7 @@ describe('SliderService: orden y activación', () => {
       touch: async () => undefined,
       locationExists: async (u: string) => u === 'pagina:contacto',
     }),
+    fake<PageRepository>({ slugExists: async (slug: string) => slug !== 'no-existe' }),
     fake<MediaService>({ syncUsages: async () => undefined, assertUsable: async () => undefined }),
     auditSvc,
     cache,
@@ -303,6 +304,7 @@ describe('SliderService: orden y activación', () => {
     await assert.rejects(svc.reorder(ADMIN, 1, [10, 11, 12], null, 3), { code: 'EDIT_CONFLICT' });
     await assert.rejects(svc.create(ADMIN, { nombre: 'X', ubicacion: 'portada' }, null), { status: 422 });
     await assert.rejects(svc.create(ADMIN, { nombre: 'X', ubicacion: 'pagina:contacto' }, null), { status: 409 });
+    await assert.rejects(svc.create(ADMIN, { nombre: 'X', ubicacion: 'pagina:no-existe' }, null), { status: 422 }, 'QA-12: la página debe existir');
     await assert.rejects(svc.removeSlide(EDITOR, 1, 10, null), { status: 403 });
   });
 

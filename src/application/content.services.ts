@@ -334,9 +334,16 @@ export class NewsService {
     authorize(actor, 'news.create');
     if (requierePermisoPublicar(null, input.estado as Estado)) authorize(actor, 'news.publish');
     const data = await this.prepare(input);
-    return this.guard(async () =>
-      this.persist(actor, null, { ...data, slug: await this.uniqueSlug(input.slug, data.titulo, 0) }, accionPublicacion('noticia', null, data.estado), ip),
-    );
+    // Slug automático: si otra creación simultánea tomó el mismo, se recalcula (-2, -3…) en lugar de responder 409.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.guard(async () =>
+          this.persist(actor, null, { ...data, slug: await this.uniqueSlug(input.slug, data.titulo, 0) }, accionPublicacion('noticia', null, data.estado), ip),
+        );
+      } catch (err) {
+        if (input.slug || attempt >= 5 || !(err instanceof ConflictError)) throw err;
+      }
+    }
   }
 
   async update(actor: Actor | null, id: number, input: NewsInput, ip: string | null): Promise<NewsRecord> {
@@ -409,6 +416,7 @@ export class SliderService {
   constructor(
     private readonly db: Db,
     private readonly sliders: SliderRepository,
+    private readonly pages: PageRepository,
     private readonly media: MediaService,
     private readonly audit: AuditService,
     private readonly cache: PublicCache,
@@ -433,6 +441,8 @@ export class SliderService {
   private async validateLocation(ubicacion: string, exceptId: number): Promise<void> {
     if (!UBICACION_RE.test(ubicacion))
       throw new ValidationError('Ubicación no válida. Use "inicio" o "pagina:<direccion>".', [{ campo: 'ubicacion', mensaje: 'Formato inválido' }]);
+    if (ubicacion.startsWith('pagina:') && !(await this.pages.slugExists(ubicacion.slice('pagina:'.length))))
+      throw new ValidationError('No existe una página con esa dirección.', [{ campo: 'ubicacion', mensaje: 'Página inexistente' }]);
     if (await this.sliders.locationExists(ubicacion, exceptId)) throw this.duplicate();
   }
 

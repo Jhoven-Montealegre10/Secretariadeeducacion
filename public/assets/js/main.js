@@ -32,6 +32,7 @@
     if (!e.target.closest('.has-sub')) {
       document.querySelectorAll('.has-sub.open').forEach(function (o) {
         o.classList.remove('open');
+        o.querySelector('.nav-btn').setAttribute('aria-expanded', 'false');
       });
     }
   });
@@ -39,6 +40,9 @@
     if (e.key === 'Escape') {
       document.querySelectorAll('.has-sub.open').forEach(function (o) {
         o.classList.remove('open');
+        var b = o.querySelector('.nav-btn');
+        b.setAttribute('aria-expanded', 'false');
+        if (o.contains(document.activeElement)) b.focus(); // el foco vuelve al botón que abrió el submenú
       });
     }
   });

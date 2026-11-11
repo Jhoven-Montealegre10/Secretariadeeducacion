@@ -33,14 +33,16 @@ const fileSchema = z.object({
   acepto: z.literal('on', { message: 'Debe aceptar la política de tratamiento de datos.' }),
 });
 const lookupSchema = z.object({
+  // Tolerante a minúsculas en el radicado y a espacios o puntos en el documento (como se escriben a mano).
   radicado: z
     .string()
     .trim()
+    .toUpperCase()
     .regex(/^SEM-\d{4}-\d{8}$/, 'Radicado debe tener el formato SEM-AAAA-00000000.'),
   documento: z
     .string()
-    .trim()
-    .regex(/^[A-Za-z0-9]{4,20}$/, 'Número de documento no es válido.'),
+    .transform((v) => v.replace(/[\s.]/g, ''))
+    .pipe(z.string().regex(/^[A-Za-z0-9]{4,20}$/, 'Número de documento no es válido.')),
 });
 
 @Controller()

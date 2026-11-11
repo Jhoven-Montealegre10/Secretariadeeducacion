@@ -142,7 +142,9 @@ export class SiteController {
 
   @WebRoute('get', '/.well-known/security.txt', { auth: 'public' })
   securityTxt(@Res() res: Response) {
-    res.type('text/plain').send('Contact: mailto:educacion@ibague.gov.co\nPreferred-Languages: es\nPolicy: /transparencia#terminos\n');
+    // RFC 9116: Expires es obligatorio; se renueva solo (un año desde hoy) mientras el contacto siga vigente.
+    const expires = `${new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10)}T00:00:00Z`;
+    res.type('text/plain').send(`Contact: mailto:educacion@ibague.gov.co\nExpires: ${expires}\nPreferred-Languages: es\nPolicy: /transparencia#terminos\n`);
   }
 
   @WebRoute('get', '/robots.txt', { auth: 'public' })

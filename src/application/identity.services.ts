@@ -17,7 +17,7 @@ import { slugify } from '../domain/content';
 import { ConflictError, EditConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors';
 import { catalogo, esPermisoValido, ROL_ADMINISTRADOR, type Actor } from '../domain/permissions';
 import { versionCoincide } from '../domain/publication';
-import { Db, PG, pgCode } from '../infrastructure/database/db.service';
+import { Db, LOCKS, PG, pgCode } from '../infrastructure/database/db.service';
 import {
   CredentialRepository,
   RoleRepository,
@@ -110,6 +110,7 @@ export class UserService {
     authorize(actor, 'users.update');
     try {
       return await this.db.transaction(async () => {
+        await this.db.advisoryXactLock(LOCKS.USER_ADMIN); // un cambio de cuentas a la vez: sin interbloqueos entre administradores
         const user = await this.requireUser(id, true);
         if (!versionCoincide(changes.version, user.version)) throw new EditConflictError(user.version);
         const self = user.id === actor.id;
@@ -162,6 +163,7 @@ export class UserService {
   async remove(actor: Actor | null, id: number, ip: string | null): Promise<void> {
     authorize(actor, 'users.delete');
     await this.db.transaction(async () => {
+      await this.db.advisoryXactLock(LOCKS.USER_ADMIN);
       const user = await this.requireUser(id, true);
       if (user.id === actor.id) throw new ForbiddenError('No puede eliminar su propia cuenta.');
       if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR)
@@ -177,6 +179,7 @@ export class UserService {
   async resetMfa(actor: Actor | null, id: number, ip: string | null): Promise<void> {
     authorize(actor, 'users.update');
     await this.db.transaction(async () => {
+      await this.db.advisoryXactLock(LOCKS.USER_ADMIN);
       const user = await this.requireUser(id, true);
       if (user.id === actor.id) throw new ForbiddenError('Use "Mi cuenta" para cambiar su propio segundo factor.');
       if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR)

@@ -30,7 +30,7 @@ permisos, contraseña, segundo factor o al desactivar al usuario.
 
 - **Respuesta:** `{ "data": ... }` o, en listados, `{ "data": [...], "meta": { page, pageSize, total, totalPages } }`.
 - **Error:** `{ "error": { "code", "message", "details"?: [{ campo, mensaje }], "requestId" } }` con códigos 400, 401, 403, 404, 409, 413, 422, 429, 500 y 503 (`SERVICE_BUSY`: base de datos ocupada; reintente según `Retry-After`).
-- **Paginación:** `page` (≥ 1), `pageSize` (1–100; la API pública máx. 50). **Orden:** `sort=campo` o `sort=-campo`, solo valores listados en la especificación. **Búsqueda:** `q`.
+- **Paginación:** `page` (≥ 1), `pageSize` (1–100; en `/public/noticias` máx. 50). **Orden:** `sort=campo` o `sort=-campo`, solo valores listados en la especificación. **Búsqueda:** `q`.
 - **Validación:** todas las entradas se validan con esquemas estrictos (campos desconocidos → 422). Las salidas son DTO explícitos: nunca se devuelven hashes, secretos MFA, tokens ni datos internos.
 - **GET nunca modifica datos.**
 - **Conflictos:** duplicados, recursos en uso, último administrador → `409` con `details`. Las operaciones compuestas son transaccionales.
