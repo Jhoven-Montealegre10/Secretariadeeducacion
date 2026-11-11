@@ -37,6 +37,8 @@ let browser: Browser;
 let pasoActual = '(inicio)';
 
 const cspViolations = new Set<string>();
+/** Verdadero solo mientras la prueba "sin conexión" mantiene el navegador sin red a propósito. */
+let sinRedProvocada = false;
 /** Avisos producidos por la propia captura de pantalla de WebKit (no por la aplicación): se informan aparte. */
 const artefactosCaptura = new Set<string>();
 const capturando = new WeakMap<Page, number>();
@@ -78,7 +80,9 @@ function watch(page: Page, label: string): Page {
     }
     if (m.text().startsWith('CSP-VIOLATION')) cspViolations.add(`${label} ${page.url().replace(base, '')}: ${m.text()}`);
     // Esperados: 4xx provocados a propósito (sesión vencida) y la desconexión simulada de la prueba sin red.
-    if (m.type() === 'error' && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) {
+    // Durante la prueba sin red, el fallo de las peticiones a la API es el efecto buscado (cada navegador lo redacta distinto).
+    const fallaEsperadaSinRed = sinRedProvocada && /^Failed to load resource/.test(m.text()) && (m.location().url ?? '').includes('/api/');
+    if (m.type() === 'error' && !fallaEsperadaSinRed && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) {
       const loc = m.location();
       const donde = loc.url ? ` @ ${loc.url.replace(base, '')}:${loc.lineNumber}` : ` @ ${page.url().replace(base, '')}`;
       consoleErrors.push(`${label} [${pasoActual}]: ${m.text()}${donde}`);
@@ -390,10 +394,13 @@ async function main(): Promise<void> {
     await p.click('#admin-menu >> text=Noticias');
     await p.waitForSelector('table');
     await desktop.setOffline(true);
+    sinRedProvocada = true;
     try {
       await p.click('#admin-menu >> text=Páginas');
       await p.waitForSelector('text=No hay conexión', { timeout: 10000 });
+      await p.waitForTimeout(250); // los avisos de consola llegan de forma asíncrona
     } finally {
+      sinRedProvocada = false;
       await desktop.setOffline(false);
     }
   });
