@@ -47,6 +47,11 @@ function destroy(req, res) {
 function loadActor(authService) {
   return (req, res, next) => {
     req.actor = null;
+    const pending = req.session?.pending;
+    if (pending && (pending.expiresAt <= Date.now() || pending.authVersion !== authService.currentAuthVersion(pending.userId))) {
+      delete req.session.pending;
+      delete req.session.mfaSetup;
+    }
     const auth = req.session?.auth;
     if (auth) {
       const expired = Date.now() - auth.loginAt > config.session.absoluteMs;

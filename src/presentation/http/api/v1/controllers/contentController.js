@@ -45,6 +45,7 @@ function register({ route }, { mediaService, pageService, newsService, sliderSer
       description:
         'Se verifica el contenido real (no la extensión ni el MIME declarado). Las imágenes se re-codifican sin metadatos. Los archivos quedan privados hasta que se marquen públicos o los use un contenido publicado.',
       upload: { middleware: mediaUpload, schema: S.MediaUploadForm },
+      errors: [503],
       responses: { 201: { description: 'Archivos guardados', schema: S.MediaUploadResult } },
     },
     async (req) => ({ data: (await mediaService.upload(req.actor, req.files, fields(S.MediaUploadFields, req.body), req.ip)).map(S.toMedia) }),
@@ -107,7 +108,7 @@ function register({ route }, { mediaService, pageService, newsService, sliderSer
       description: 'Si el archivo está en uso responde 409 con la lista de usos; reenvíe con `confirmar=true`. Debe ser del mismo tipo (imagen/audio).',
       upload: { middleware: mediaReplaceUpload, schema: S.MediaReplaceForm },
       request: { params: IdParams },
-      errors: [409],
+      errors: [409, 503],
       responses: { 200: { description: 'Reemplazado', schema: S.MediaOne } },
     },
     async (req) => {
@@ -436,6 +437,7 @@ function register({ route }, { mediaService, pageService, newsService, sliderSer
       rateLimit: limits.upload,
       summary: 'Publicar documento PDF',
       upload: { middleware: documentUpload, schema: S.DocumentForm },
+      errors: [503],
       responses: { 201: { description: 'Publicado', schema: S.DocumentOne } },
     },
     async (req) => ({ data: S.toDocument(await documentService.create(req.actor, fields(S.DocumentFields, req.body), req.file, req.ip)) }),

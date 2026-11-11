@@ -55,10 +55,17 @@ describe('Carga de archivos', () => {
   });
 
   test('rechaza una solicitud cuyo tamaño total supera el máximo, antes de leerla', async () => {
-    const files = [];
-    for (let i = 0; i < 2; i++) files.push([Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(14 * 1024 * 1024)]), `grande${i}.jpg`]);
-    const res = await uploadReq(editorAgent, files);
-    assert.equal(res.status, 413);
+    // Verifica el rechazo antes de consumir bytes. En Windows, enviar 28 MB a una
+    // conexión rechazada temprano puede causar ECONNRESET en el cliente de prueba.
+    const { mediaUpload } = require('../src/presentation/http/middleware/upload');
+    const config = require('../src/config');
+    const req = { get: (header) => (header === 'content-length' ? String(config.uploads.maxRequestBytes + 1) : undefined) };
+    let error;
+    mediaUpload(req, {}, (err) => {
+      error = err;
+    });
+    assert.equal(error?.status, 413);
+    assert.equal(error?.code, 'PAYLOAD_TOO_LARGE');
   });
 
   test('una imagen dañada con cabecera válida se rechaza', async () => {

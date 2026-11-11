@@ -68,4 +68,6 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 - **Sin escalada de privilegios:** nadie asigna un rol ni concede permisos que no tenga.
 - Un editor no puede modificar su rol con una petición manipulada: los esquemas de entrada son estrictos y rechazan campos no permitidos (`422`), y `PATCH /usuarios/{id}` exige `users.update`.
 - Cambiar el rol, los permisos de un rol, desactivar a un usuario, cambiar o recuperar la contraseña, o cambiar el segundo factor **revoca o revalida de inmediato** las sesiones afectadas.
-- Solo un administrador puede desactivar, cambiar de rol o eliminar a otro administrador.
+- Solo un administrador puede modificar a otro administrador, incluyendo su correo, MFA e invitaciones.
+- Un gestor de usuarios solo puede modificar, eliminar, restablecer MFA o reenviar invitaciones de otras cuentas cuyos permisos estén contenidos en los suyos.
+- Cambiar correo, rol, desactivar una cuenta o restablecer su MFA invalida también los enlaces de recuperación anteriores.

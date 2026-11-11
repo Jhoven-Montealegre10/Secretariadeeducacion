@@ -58,6 +58,7 @@ const ERROR_DESCRIPTIONS = {
   413: 'El cuerpo o el archivo supera el tamaño permitido.',
   422: 'Error de validación de los datos.',
   429: 'Demasiadas solicitudes; intente más tarde.',
+  503: 'El análisis antimalware no está disponible; intente cargar el archivo más tarde.',
 };
 
 function errorResponses(codes) {

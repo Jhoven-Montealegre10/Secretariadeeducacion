@@ -5574,6 +5574,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "El análisis antimalware no está disponible; intente cargar el archivo más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -6073,6 +6083,16 @@
           },
           "429": {
             "description": "Demasiadas solicitudes; intente más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El análisis antimalware no está disponible; intente cargar el archivo más tarde.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8251,6 +8271,16 @@
           },
           "429": {
             "description": "Demasiadas solicitudes; intente más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El análisis antimalware no está disponible; intente cargar el archivo más tarde.",
             "content": {
               "application/json": {
                 "schema": {

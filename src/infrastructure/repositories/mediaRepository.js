@@ -121,7 +121,11 @@ const mediaRepository = {
     return !!db
       .prepare(
         `SELECT 1 FROM medios m WHERE m.id = ? AND (m.visibilidad = 'publica'
-      OR EXISTS (SELECT 1 FROM medios_usos mu WHERE mu.medio_id = m.id AND mu.publicado = 1))`,
+      OR EXISTS (SELECT 1 FROM medios_usos mu WHERE mu.medio_id = m.id AND mu.publicado = 1
+        AND (mu.entidad <> 'noticia' OR EXISTS (
+          SELECT 1 FROM noticias n WHERE n.id = mu.entidad_id
+          AND n.estado = 'publicada' AND n.fecha_publicacion <= date('now', '-5 hours')
+        ))))`,
       )
       .get(id);
   },

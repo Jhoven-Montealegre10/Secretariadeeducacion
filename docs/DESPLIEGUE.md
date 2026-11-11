@@ -13,7 +13,7 @@ No use datos personales reales fuera de producción. Si necesita una copia, anon
 
 ## 2. Requisitos del servidor
 
-- Linux, **Node.js 22.13+**, proxy inverso con TLS (Nginx o Apache), ClamAV (recomendado), servidor SMTP institucional.
+- Linux, **Node.js 22.13+**, proxy inverso con TLS (Nginx o Apache), ClamAV (obligatorio para cargar archivos en producción), servidor SMTP institucional.
 - Usuario de sistema sin privilegios (p. ej. `semibague`), sin shell interactivo.
 - Carpeta de datos fuera del código (p. ej. `/var/lib/semibague`) propiedad de ese usuario, permisos `0750`.
 
@@ -23,6 +23,12 @@ No use datos personales reales fuera de producción. Si necesita una copia, anon
 2. `npm run generate-keys` y guarde los valores en el **gestor de secretos** institucional o en `/etc/semibague/semibague.env` (propietario `root`, grupo `semibague`, permisos `0640`).
 3. Guarde una copia de `DATA_ENCRYPTION_KEY` **separada de las copias de la base de datos**. Sin ella no se pueden leer las PQRSD ni los segundos factores.
 4. Complete las variables a partir de `.env.example` (valores ficticios). El servidor **no arranca** en producción si faltan secretos o si `APP_URL` no usa `https://`.
+
+Configure `MALWARE_SCAN_COMMAND` con la ruta absoluta de `clamdscan` y mantenga sus firmas actualizadas.
+Con `NODE_ENV=production`, si el comando está vacío o falla (incluido un timeout), las cargas se rechazan
+con `503 MALWARE_SCAN_UNAVAILABLE`. El portal y el acceso al panel siguen disponibles. Un archivo detectado
+como infectado se rechaza con `422`. Desarrollo y pruebas permiten trabajar sin el escáner instalado.
+Antes de publicar, compruebe el escaneo con ClamAV real y una muestra EICAR en preproducción.
 
 ## 4. Base de datos y migraciones
 

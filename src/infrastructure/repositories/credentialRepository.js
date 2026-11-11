@@ -26,8 +26,12 @@ const credentialRepository = {
   },
 
   createResetToken(userId, tokenHash, expiraEn) {
-    db.prepare("UPDATE tokens_recuperacion SET usado_en = datetime('now') WHERE usuario_id = ? AND usado_en IS NULL").run(userId);
+    this.revokeResetTokens(userId);
     db.prepare('INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES (?, ?, ?)').run(userId, tokenHash, expiraEn);
+  },
+
+  revokeResetTokens(userId) {
+    db.prepare("UPDATE tokens_recuperacion SET usado_en = datetime('now') WHERE usuario_id = ? AND usado_en IS NULL").run(userId);
   },
 
   findResetToken(tokenHash) {

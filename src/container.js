@@ -47,7 +47,17 @@ const { createSearchService } = require('./application/searchService');
 const { createInstitutionService } = require('./application/institutionService');
 
 const audit = createAuditService({ auditRepository: repos.auditRepository, hashIp: (ip) => cryptoSvc.statsHash('audit-ip', ip).slice(0, 16) });
-const authService = createAuthService({ ...repos, passwordHasher, passwordStrength, totp, crypto: cryptoSvc, mailer, audit, appUrl: config.appUrl });
+const authService = createAuthService({
+  ...repos,
+  passwordHasher,
+  passwordStrength,
+  totp,
+  crypto: cryptoSvc,
+  mailer,
+  audit,
+  appUrl: config.appUrl,
+  transaction,
+});
 const mediaService = createMediaService({
   mediaRepository: repos.mediaRepository,
   storage: createStorage(config.mediaDir),

@@ -35,6 +35,14 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
     }
   }
 
+  function requireManageableUser(actor, user) {
+    if (user.id === actor.id) return;
+    if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR) {
+      throw new ForbiddenError('Solo un administrador puede gestionar a otro administrador.');
+    }
+    requireAssignableRole(actor, user.rolId);
+  }
+
   return {
     list(actor, filters) {
       authorize(actor, 'users.read');
@@ -63,6 +71,7 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
     update(actor, id, changes, ip) {
       authorize(actor, 'users.update');
       const user = requireUser(id);
+      requireManageableUser(actor, user);
       const self = user.id === actor.id;
       if (self && changes.rolId !== undefined && changes.rolId !== user.rolId) throw new ForbiddenError('No puede cambiar su propio rol.');
       if (self && changes.activo === false) throw new ForbiddenError('No puede desactivar su propia cuenta.');
@@ -88,6 +97,7 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
         if (roleChanged || deactivated || (changes.email && changes.email !== user.email)) {
           userRepository.bumpAuthVersion(id); // revoca sesiones activas
           credentialRepository.deleteSessionsOfUser(id);
+          credentialRepository.revokeResetTokens(id);
         }
         audit.record({
           actor,
@@ -110,6 +120,7 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
     remove(actor, id, ip) {
       authorize(actor, 'users.delete');
       const user = requireUser(id);
+      requireManageableUser(actor, user);
       if (user.id === actor.id) throw new ForbiddenError('No puede eliminar su propia cuenta.');
       if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR)
         throw new ForbiddenError('Solo un administrador puede eliminar a otro administrador.');
@@ -125,11 +136,13 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
     resetMfa(actor, id, ip) {
       authorize(actor, 'users.update');
       const user = requireUser(id);
+      requireManageableUser(actor, user);
       if (user.id === actor.id) throw new ForbiddenError('Use "Mi cuenta" para cambiar su propio segundo factor.');
       transaction(() => {
         userRepository.setMfa(id, { secretoEnc: null, activo: false });
         credentialRepository.replaceRecoveryCodes(id, []);
         credentialRepository.deleteSessionsOfUser(id);
+        credentialRepository.revokeResetTokens(id);
         audit.record({ actor, accion: 'usuario_restablecer_mfa', recurso: 'usuario', recursoId: id, ip });
       });
     },
@@ -137,6 +150,7 @@ function createUserService({ userRepository, roleRepository, credentialRepositor
     async resendInvitation(actor, id, ip) {
       authorize(actor, 'users.update');
       const user = requireUser(id);
+      requireManageableUser(actor, user);
       await authService.sendInvitation(user);
       audit.record({ actor, accion: 'usuario_enviar_invitacion', recurso: 'usuario', recursoId: id, ip });
     },

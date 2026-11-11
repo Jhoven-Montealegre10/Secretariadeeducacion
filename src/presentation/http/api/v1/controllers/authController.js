@@ -60,9 +60,9 @@ function register({ route }, { authService, userService, audit }) {
       responses: { 200: { description: 'Contraseña correcta; falta el segundo factor', schema: S.LoginStep } },
     },
     async (req) => {
-      const { userId, siguientePaso } = await authService.verifyPassword(req.valid.body.email, req.valid.body.password, req.ip);
+      const { userId, authVersion, siguientePaso } = await authService.verifyPassword(req.valid.body.email, req.valid.body.password, req.ip);
       await regenerate(req);
-      req.session.pending = { userId, siguientePaso, expiresAt: Date.now() + config.session.pendingMfaMs, intentos: 0 };
+      req.session.pending = { userId, authVersion, siguientePaso, expiresAt: Date.now() + config.session.pendingMfaMs, intentos: 0 };
       await save(req);
       return { data: { siguientePaso, csrfToken: ensureToken(req) } };
     },
@@ -138,7 +138,9 @@ function register({ route }, { authService, userService, audit }) {
       if (req.session.pending.siguientePaso !== 'configurar_mfa' || !setup || setup.expiresAt < Date.now()) {
         throw new UnauthorizedError('Genere de nuevo el código QR.', 'MFA_SETUP_EXPIRED');
       }
-      const { codigosRecuperacion } = authService.confirmEnrollment(req.session.pending.userId, setup.secret, req.valid.body.codigo, req.ip);
+      const { codigosRecuperacion } = authService.confirmEnrollment(req.session.pending.userId, setup.secret, req.valid.body.codigo, req.ip, {
+        authVersion: req.session.pending.authVersion,
+      });
       const { csrfToken } = await completeLogin(req, req.session.pending.userId);
       return { data: { codigosRecuperacion, csrfToken } };
     },
@@ -277,7 +279,10 @@ function register({ route }, { authService, userService, audit }) {
       requireFreshReauth(req);
       const setup = req.session.mfaSetup;
       if (!setup || setup.expiresAt < Date.now()) throw new UnauthorizedError('Genere de nuevo el código QR.', 'MFA_SETUP_EXPIRED');
-      const { codigosRecuperacion } = authService.confirmEnrollment(req.actor.id, setup.secret, req.valid.body.codigo, req.ip);
+      const { codigosRecuperacion } = authService.confirmEnrollment(req.actor.id, setup.secret, req.valid.body.codigo, req.ip, {
+        replace: true,
+        authVersion: req.actor.authVersion,
+      });
       const { csrfToken } = await completeLogin(req, req.actor.id);
       return { data: { codigosRecuperacion, csrfToken } };
     },

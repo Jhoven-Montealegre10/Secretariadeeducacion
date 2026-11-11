@@ -52,7 +52,7 @@ invitación y recuperación se guardan en `storage/correo-desarrollo/`.
 
 ```bash
 npm run verify     # lint + tipos + pruebas + contrato OpenAPI + auditoría de dependencias
-npm test           # 71 pruebas de seguridad y flujos críticos
+npm test           # 78 pruebas de seguridad y flujos críticos
 npm run openapi:export   # regenera docs/openapi*.json desde el código
 ```
 

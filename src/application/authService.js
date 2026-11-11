@@ -39,6 +39,7 @@ function createAuthService({
   mailer,
   audit,
   appUrl,
+  transaction,
   clock = Date,
 }) {
   function checkPolicy(password, user) {
@@ -97,7 +98,7 @@ function createAuthService({
       if (passwordHasher.needsRehash(user.passwordHash)) {
         userRepository.setPasswordHash(user.id, await passwordHasher.hash(password), { rotateSessions: false });
       }
-      return { userId: user.id, siguientePaso: user.mfaActivo ? 'mfa' : 'configurar_mfa' };
+      return { userId: user.id, authVersion: user.authVersion, siguientePaso: user.mfaActivo ? 'mfa' : 'configurar_mfa' };
     },
 
     /** Segundo factor con código TOTP o código de recuperación. */
@@ -154,24 +155,35 @@ function createAuthService({
     },
 
     /** Confirma el enrolamiento con un código válido; guarda el secreto cifrado y devuelve los códigos de recuperación (una sola vez). */
-    confirmEnrollment(userId, secret, codigo, ip) {
-      const user = userRepository.findById(userId);
-      if (!user || !secret) throw new UnauthorizedError('Inicie de nuevo la configuración del segundo factor.', 'MFA_SETUP_EXPIRED');
-      const step = totp.verify(secret, codigo, clock.now());
-      if (step === null)
-        throw new ValidationError('El código no coincide. Verifique la hora de su teléfono e intente de nuevo.', [
-          { campo: 'codigo', mensaje: 'Código incorrecto' },
-        ]);
-      userRepository.setMfa(user.id, { secretoEnc: cryptoSvc.encrypt(secret), activo: true });
-      userRepository.consumeTotpStep(user.id, step);
-      const codes = Array.from({ length: RECOVERY_CODES }, newRecoveryCode);
-      credentialRepository.replaceRecoveryCodes(
-        user.id,
-        codes.map((c) => cryptoSvc.tokenHash(normalizeCode(c))),
-      );
-      userRepository.recordLoginSuccess(user.id);
-      audit.record({ actor: { id: user.id, email: user.email }, accion: 'mfa_configurar', recurso: 'usuario', recursoId: user.id, ip });
-      return { codigosRecuperacion: codes };
+    confirmEnrollment(userId, secret, codigo, ip, { replace = false, authVersion = undefined } = {}) {
+      return transaction(() => {
+        const user = userRepository.findById(userId);
+        if (!user || !secret) throw new UnauthorizedError('Inicie de nuevo la configuración del segundo factor.', 'MFA_SETUP_EXPIRED');
+        if (
+          !user.activo ||
+          (user.bloqueadoHasta && user.bloqueadoHasta > clock.now()) ||
+          (authVersion !== undefined && user.authVersion !== authVersion) ||
+          (replace ? authVersion === undefined || !user.mfaActivo : user.mfaActivo)
+        ) {
+          throw new UnauthorizedError('Inicie sesión de nuevo para configurar el segundo factor.', 'MFA_SETUP_EXPIRED');
+        }
+        const step = totp.verify(secret, codigo, clock.now());
+        if (step === null)
+          throw new ValidationError('El código no coincide. Verifique la hora de su teléfono e intente de nuevo.', [
+            { campo: 'codigo', mensaje: 'Código incorrecto' },
+          ]);
+        userRepository.setMfa(user.id, { secretoEnc: cryptoSvc.encrypt(secret), activo: true });
+        userRepository.consumeTotpStep(user.id, step);
+        const codes = Array.from({ length: RECOVERY_CODES }, newRecoveryCode);
+        credentialRepository.replaceRecoveryCodes(
+          user.id,
+          codes.map((c) => cryptoSvc.tokenHash(normalizeCode(c))),
+        );
+        userRepository.recordLoginSuccess(user.id);
+        credentialRepository.deleteSessionsOfUser(user.id);
+        audit.record({ actor: { id: user.id, email: user.email }, accion: 'mfa_configurar', recurso: 'usuario', recursoId: user.id, ip });
+        return { codigosRecuperacion: codes };
+      });
     },
 
     regenerateRecoveryCodes(userId, ip) {
@@ -204,10 +216,14 @@ function createAuthService({
         throw new ValidationError('La contraseña actual no es correcta.', [{ campo: 'actual', mensaje: 'Incorrecta' }]);
       }
       checkPolicy(nueva, user);
-      userRepository.setPasswordHash(user.id, await passwordHasher.hash(nueva)); // invalida las demás sesiones
-      credentialRepository.deleteSessionsOfUser(user.id);
-      audit.record({ actor: user, accion: 'cambiar_password', recurso: 'usuario', recursoId: userId, ip });
-      return userRepository.findById(user.id).authVersion;
+      const hash = await passwordHasher.hash(nueva);
+      return transaction(() => {
+        userRepository.setPasswordHash(user.id, hash); // invalida las demás sesiones
+        credentialRepository.deleteSessionsOfUser(user.id);
+        credentialRepository.revokeResetTokens(user.id);
+        audit.record({ actor: user, accion: 'cambiar_password', recurso: 'usuario', recursoId: userId, ip });
+        return userRepository.findById(user.id).authVersion;
+      });
     },
 
     /** Siempre responde igual, exista o no el correo (evita enumeración). */
@@ -244,10 +260,13 @@ function createAuthService({
       if (!user || !user.activo) throw invalid();
       checkPolicy(nueva, user);
       const hash = await passwordHasher.hash(nueva);
-      if (!credentialRepository.consumeResetToken(record.id)) throw invalid();
-      userRepository.setPasswordHash(user.id, hash);
-      credentialRepository.deleteSessionsOfUser(user.id);
-      audit.record({ actor: user, accion: 'restablecer_password', recurso: 'usuario', recursoId: user.id, ip });
+      return transaction(() => {
+        if (!credentialRepository.consumeResetToken(record.id)) throw invalid();
+        userRepository.setPasswordHash(user.id, hash);
+        credentialRepository.deleteSessionsOfUser(user.id);
+        credentialRepository.revokeResetTokens(user.id);
+        audit.record({ actor: user, accion: 'restablecer_password', recurso: 'usuario', recursoId: user.id, ip });
+      });
     },
 
     /** Construye el actor (identidad + permisos) a partir de la base de datos, nunca del navegador. */
