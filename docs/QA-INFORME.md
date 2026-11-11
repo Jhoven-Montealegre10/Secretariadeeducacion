@@ -44,6 +44,20 @@ npm run test:load                 # informe en test-results/carga/informe-carga.
 
 La CI (`.github/workflows/ci.yml`) ejecuta lo mismo con un servicio PostgreSQL 16 y E2E en Chromium, Firefox y WebKit.
 
+**Resultado en la CI de GitHub (ejecución 12, commit `f35f0c4`): todo aprobado.** Pasaron `verificar` (lint, formato, tipos, build, unitarias, integración con PostgreSQL, roles y migraciones, deriva del esquema, contrato OpenAPI y auditoría de dependencias) y las E2E en **Chromium, Firefox y WebKit**.
+
+La CI en tres navegadores encontró y permitió corregir:
+- **Defecto real en Firefox:** el `pattern` del slug y del ancla (`[a-z0-9-]+`) es inválido con la bandera `v` de HTML. Firefox lo ignoraba, así que esos campos no se validaban en el navegador. Corregido como `[a-z0-9\-]+`. El servidor ya lo validaba.
+- **Inestabilidad de la propia prueba:**
+  - esperas a un aviso genérico, que ahora esperan el texto exacto;
+  - navegaciones que interrumpían peticiones en curso, que ahora esperan a que la red quede inactiva;
+  - dependencia del mapa real de Google, que en la E2E ahora se responde con una página local.
+- **Avisos ajenos a la aplicación en WebKit:**
+  - El motor de captura de pantalla de WebKit inserta un estilo que la CSP bloquea. Solo ese aviso, solo en WebKit y solo durante la captura, se informa aparte en `avisosDeCapturaWebkit`.
+  - WebKit redacta como «internal error» el fallo de red que provoca a propósito la prueba «sin conexión». Solo se acepta durante esa prueba.
+
+La CSP no se relajó. Cualquier otro error de consola o violación de CSP sigue haciendo fallar la prueba.
+
 ## 4. Pruebas de carga
 
 Una instancia, `DB_POOL_MAX=10`, caché pública de 60 s, 15 s por escenario.
@@ -133,12 +147,12 @@ y un agente HTTP atado a un servidor cerrado); la aplicación se comportaba corr
 
 | Elemento | Motivo | Cómo cubrirlo |
 |---|---|---|
-| E2E en Firefox y WebKit | Solo Chromium está instalado en este entorno | Configurados en la CI (`matrix.browser`) |
+| E2E en Firefox y WebKit en este entorno | Solo Chromium está instalado aquí | **Ejecutadas y aprobadas en la CI** (ejecución 12) |
 | Error 500 provocado en el navegador | No se puede provocar de forma segura sin alterar el código | Filtro de errores cubierto por pruebas unitarias; contratos validados en cada respuesta |
 | Expiración real a los 30 min y 8 h, desbloqueo a los 15 min | Esperas largas; se simularon manipulando la sesión y el bloqueo en la BD | Prueba manual en preproducción |
 | SMTP real y antimalware (ClamAV) | No configurados en el entorno de pruebas | Lista de verificación de `DESPLIEGUE.md` §10 (EICAR) |
 | Cookie `__Host-`/`Secure` y HSTS | Solo se activan con `NODE_ENV=production` y HTTPS | Verificación en preproducción |
-| Mapa de Google (Contacto) | Sin salida a Internet | Preproducción |
+| Mapa de Google (Contacto) | En la E2E se sustituye por una página local (no se prueba el servicio de Google) | Preproducción |
 | DAST (OWASP ZAP) y pentest externo | No ejecutados | Pendiente P-11 de `SEGURIDAD-AUDITORIA.md` |
 | Respaldo y restauración de PostgreSQL en la infraestructura real | No disponible aquí (sí se probaron respaldo, restauración y migración de SQLite) | `DESPLIEGUE.md` §9 |
 | Carga representativa de producción | Ver supuestos en §4 | Repetir en preproducción |
