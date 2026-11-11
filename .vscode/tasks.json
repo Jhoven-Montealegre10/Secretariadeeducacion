@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Pruebas",
+      "type": "npm",
+      "script": "test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pruebas con cobertura",
+      "type": "npm",
+      "script": "test:coverage",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Calidad completa",
+      "type": "npm",
+      "script": "quality",
+      "problemMatcher": []
+    }
+  ]
+}

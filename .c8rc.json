@@ -1,0 +1,6 @@
+{
+  "all": true,
+  "include": ["src/**/*.js", "app.js", "server.js"],
+  "reporter": ["text", "html", "lcovonly", "json-summary"],
+  "reports-dir": "coverage"
+}

@@ -1,4 +1,5 @@
 node_modules
+coverage
 storage
 docs/openapi*.json
 package-lock.json

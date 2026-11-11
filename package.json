@@ -20,7 +20,9 @@
     "format": "prettier --write \"**/*.{js,css,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,css,json,md}\"",
     "typecheck": "tsc -p jsconfig.json",
-    "test": "NODE_ENV=test node --disable-warning=ExperimentalWarning --test --test-concurrency=1 tests/*.test.js",
+    "test": "node scripts/run-tests.js",
+    "test:coverage": "c8 node scripts/run-tests.js",
+    "quality": "npm run lint && npm run typecheck && npm run test:coverage && npm run openapi:check && npm audit",
     "verify": "npm run lint && npm run typecheck && npm test && npm run openapi:check && npm audit --omit=dev",
     "test:e2e": "node tests/e2e/panel.e2e.js"
   },
@@ -43,6 +45,14 @@
     "swagger-ui-dist": "^5.34.1",
     "zod": "^4.6.7"
   },
+  "overrides": {
+    "c8": {
+      "test-exclude": {
+        "glob": "^14.0.2",
+        "minimatch": "^11.0.1"
+      }
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/express": "^5.0.6",
@@ -53,6 +63,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/sanitize-html": "^2.16.2",
     "@types/supertest": "^7.2.1",
+    "c8": "^12.0.0",
     "eslint": "^9.39.5",
     "eslint-plugin-security": "^4.2.1",
     "globals": "^17.14.0",

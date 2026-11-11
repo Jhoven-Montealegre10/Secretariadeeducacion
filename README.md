@@ -50,9 +50,14 @@ invitación y recuperación se guardan en `storage/correo-desarrollo/`.
 
 ## Calidad y verificación
 
+La guía [Calidad y pruebas](docs/CALIDAD-Y-PRUEBAS.md) explica SonarQube for IDE,
+las tareas de VS Code y cómo consultar la cobertura. En Windows use `npm.cmd` si PowerShell bloquea `npm.ps1`.
+
 ```bash
 npm run verify     # lint + tipos + pruebas + contrato OpenAPI + auditoría de dependencias
 npm test           # 78 pruebas de seguridad y flujos críticos
+npm run test:coverage # genera coverage/index.html y coverage/lcov.info
+npm run quality    # código + tipos + pruebas con cobertura + OpenAPI + dependencias
 npm run openapi:export   # regenera docs/openapi*.json desde el código
 ```
 
