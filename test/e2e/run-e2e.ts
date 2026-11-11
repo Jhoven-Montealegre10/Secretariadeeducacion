@@ -37,6 +37,25 @@ let browser: Browser;
 let pasoActual = '(inicio)';
 
 const cspViolations = new Set<string>();
+/** Avisos producidos por la propia captura de pantalla de WebKit (no por la aplicación): se informan aparte. */
+const artefactosCaptura = new Set<string>();
+const capturando = new WeakMap<Page, number>();
+// WebKit (compilación de Playwright) inserta un estilo propio al capturar la pantalla y la CSP del sitio lo bloquea.
+// Solo se aparta ESTE aviso, solo en WebKit y solo mientras esa misma página está capturando; cualquier otro error cuenta.
+const AVISO_CAPTURA_WEBKIT = /^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive/;
+const VIOLACION_CAPTURA_WEBKIT = /^CSP-VIOLATION style-src-elem bloqueado=inline elemento=#document .* muestra=""$/;
+const esArtefactoCaptura = (page: Page, texto: string) =>
+  BROWSER === 'webkit' && (capturando.get(page) ?? 0) > 0 && (AVISO_CAPTURA_WEBKIT.test(texto) || VIOLACION_CAPTURA_WEBKIT.test(texto));
+
+async function shot(page: Page, opts: Parameters<Page['screenshot']>[0]): Promise<void> {
+  capturando.set(page, (capturando.get(page) ?? 0) + 1);
+  try {
+    await page.screenshot(opts);
+    await page.waitForTimeout(250); // los avisos de consola llegan de forma asíncrona
+  } finally {
+    capturando.set(page, (capturando.get(page) ?? 1) - 1);
+  }
+}
 
 function watch(page: Page, label: string): Page {
   // Detalle de cada violación de CSP (directiva, elemento y muestra del contenido bloqueado) para poder diagnosticarla.
@@ -53,6 +72,10 @@ function watch(page: Page, label: string): Page {
     });
   });
   page.on('console', (m) => {
+    if (esArtefactoCaptura(page, m.text())) {
+      artefactosCaptura.add(`${label} ${page.url().replace(base, '')}: ${m.text()}`);
+      return;
+    }
     if (m.text().startsWith('CSP-VIOLATION')) cspViolations.add(`${label} ${page.url().replace(base, '')}: ${m.text()}`);
     // Esperados: 4xx provocados a propósito (sesión vencida) y la desconexión simulada de la prueba sin red.
     if (m.type() === 'error' && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) {
@@ -61,8 +84,26 @@ function watch(page: Page, label: string): Page {
       consoleErrors.push(`${label} [${pasoActual}]: ${m.text()}${donde}`);
     }
   });
-  page.on('pageerror', (e) => consoleErrors.push(`${label} [${pasoActual}] pageerror: ${e.message}`));
+  page.on('pageerror', (e) => consoleErrors.push(`${label} [${pasoActual}] pageerror: ${e.name}: ${e.message}`));
   return page;
+}
+
+/**
+ * Navega cuando la página anterior terminó sus peticiones: así la prueba no interrumpe cargas en curso
+ * (WebKit registra como error cada fetch abortado por una navegación, aunque la aplicación lo maneje).
+ */
+async function go(page: Page, url: string): ReturnType<Page['goto']> {
+  if (page.url() !== 'about:blank') await page.waitForLoadState('networkidle').catch(() => undefined);
+  return page.goto(url);
+}
+
+/**
+ * El mapa de contacto es un iframe de www.google.com (permitido por la CSP en frame-src). En la E2E se
+ * responde con una página local para no depender de un tercero ni registrar errores de su código.
+ */
+async function aislar(ctx: BrowserContext): Promise<BrowserContext> {
+  await ctx.route('https://www.google.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Mapa</title>' }));
+  return ctx;
 }
 
 async function step(modulo: string, nombre: string, page: Page | null, fn: () => Promise<void>): Promise<void> {
@@ -76,7 +117,7 @@ async function step(modulo: string, nombre: string, page: Page | null, fn: () =>
     const detalle = (e as Error).message.split('\n')[0];
     steps.push({ modulo, nombre, resultado: 'fallida', detalle, ms: Date.now() - t });
     console.log(`  ✗ [${modulo}] ${nombre}: ${detalle}`);
-    if (page) await page.screenshot({ path: path.join(OUT, `fallo-${nombre.replace(/\W+/g, '_').slice(0, 60)}.png`), fullPage: true }).catch(() => undefined);
+    if (page) await shot(page, { path: path.join(OUT, `fallo-${nombre.replace(/\W+/g, '_').slice(0, 60)}.png`), fullPage: true }).catch(() => undefined);
   }
 }
 
@@ -98,7 +139,7 @@ const assert = (cond: unknown, msg: string): void => {
 };
 
 async function login(page: Page, email: string, password = PASSWORD): Promise<void> {
-  await page.goto(`${base}/admin/login`);
+  await go(page, `${base}/admin/login`);
   await page.fill('input[name=email]', email);
   await page.fill('input[name=password]', password);
   await page.click('button[type=submit]');
@@ -131,7 +172,7 @@ async function main(): Promise<void> {
   await h.createUser({ email: 'editor@example.gov.co', nombre: 'Ernesto Editor', rol: 'editor', mfa: false });
   fs.writeFileSync(path.join(OUT, 'portada.jpg'), await jpegBuffer());
   browser = await { chromium, firefox, webkit }[BROWSER].launch();
-  const desktop: BrowserContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  const desktop: BrowserContext = await aislar(await browser.newContext({ viewport: { width: 1366, height: 900 } }));
   const p = watch(await desktop.newPage(), 'admin');
   let recoveryCodes: string[] = [];
 
@@ -156,7 +197,7 @@ async function main(): Promise<void> {
     await p.waitForSelector('ul.codes');
     recoveryCodes = await p.$$eval('ul.codes li', (li) => li.map((x) => x.textContent?.trim() ?? ''));
     assert(recoveryCodes.length === 10, `códigos: ${recoveryCodes.length}`);
-    await p.screenshot({ path: path.join(OUT, '01-codigos-recuperacion.png') });
+    await shot(p, { path: path.join(OUT, '01-codigos-recuperacion.png') });
     await p.check('#guardados');
     await p.click('text=Ir al panel');
     await p.waitForSelector('#admin-menu a');
@@ -170,7 +211,7 @@ async function main(): Promise<void> {
         items.some((i) => i.includes(m)),
         `falta ${m}: ${items.join(',')}`,
       );
-    await p.screenshot({ path: path.join(OUT, '02-resumen.png') });
+    await shot(p, { path: path.join(OUT, '02-resumen.png') });
   });
 
   await step('Multimedia', 'subir, buscar, editar texto alternativo', p, async () => {
@@ -186,12 +227,12 @@ async function main(): Promise<void> {
     await p.click('.modal >> text=Guardar cambios');
     await p.waitForSelector('.toast--ok');
     assert((await h.db.scalar<string>('SELECT texto_alternativo FROM medios ORDER BY id DESC LIMIT 1')) === 'Portada institucional', 'persistió');
-    await p.screenshot({ path: path.join(OUT, '03-multimedia.png') });
+    await shot(p, { path: path.join(OUT, '03-multimedia.png') });
   });
 
   await step('Noticias', 'crear y publicar con imagen; aparece en el inicio en orden', p, async () => {
     const make = async (titulo: string, fecha: string) => {
-      await p.goto(`${base}/admin/noticias/nueva`);
+      await go(p, `${base}/admin/noticias/nueva`);
       await p.fill('input[name=titulo]', titulo);
       await p.fill('textarea[name=resumen]', 'Conozca fechas y requisitos para solicitar cupo.');
       await p.fill('input[name=fechaPublicacion]', fecha);
@@ -210,13 +251,13 @@ async function main(): Promise<void> {
     assert((await p.inputValue('input[name=titulo]')) === 'Inscripciones escolares recientes', 'persiste tras recargar');
     const home = await (await desktop.request.get(`${base}/`)).text();
     assert(home.indexOf('Inscripciones escolares recientes') < home.indexOf('Inscripciones escolares antiguas'), 'orden en el inicio');
-    await p.screenshot({ path: path.join(OUT, '04-noticia.png'), fullPage: true });
+    await shot(p, { path: path.join(OUT, '04-noticia.png'), fullPage: true });
   });
 
   await step('Noticias', 'dos pestañas editando la misma noticia: la segunda recibe aviso de conflicto', p, async () => {
     const url = p.url();
     const p2 = watch(await desktop.newPage(), 'admin-2');
-    await p2.goto(url);
+    await go(p2, url);
     await p2.waitForSelector('input[name=titulo]');
     await p.fill('input[name=titulo]', 'Inscripciones escolares recientes (A)');
     await p.click('button[type=submit]');
@@ -233,7 +274,7 @@ async function main(): Promise<void> {
   });
 
   await step('Páginas', 'crear borrador, vista previa protegida y publicar', p, async () => {
-    await p.goto(`${base}/admin/paginas/nueva`);
+    await go(p, `${base}/admin/paginas/nueva`);
     await p.fill('input[name=titulo]', 'Calendario escolar 2027');
     await p.selectOption('.block-editor .toolbar select', 'texto');
     await p.click('text=+ Agregar bloque');
@@ -243,25 +284,25 @@ async function main(): Promise<void> {
     await p.waitForURL(/\/admin\/paginas\/\d+/);
     const id = p.url().split('/').pop();
     assert((await desktop.request.get(`${base}/calendario-escolar-2027`)).status() === 404, 'borrador oculto');
-    const anon = await browser.newContext();
+    const anon = await aislar(await browser.newContext());
     assert(
       (await anon.request.get(`${base}/admin/vista-previa/paginas/${id}`, { headers: { accept: 'application/json' } })).status() === 401,
       'vista previa exige sesión',
     );
     await anon.close();
     const preview = watch(await desktop.newPage(), 'preview');
-    await preview.goto(`${base}/admin/vista-previa/paginas/${id}`);
+    await go(preview, `${base}/admin/vista-previa/paginas/${id}`);
     await preview.waitForSelector('.preview-banner');
     await preview.close();
     await p.selectOption('select[name=estado]', 'publicada');
     await p.click('button[type=submit]');
-    await p.waitForSelector('.toast--ok');
+    await p.waitForSelector('.toast--ok:has-text("Página guardada y publicada")');
     assert((await (await desktop.request.get(`${base}/calendario-escolar-2027`)).text()).includes('Fechas del calendario'), 'publicada');
-    await p.screenshot({ path: path.join(OUT, '05-pagina.png'), fullPage: true });
+    await shot(p, { path: path.join(OUT, '05-pagina.png'), fullPage: true });
   });
 
   await step('Sliders', 'configurar, ordenar y mostrar en el inicio', p, async () => {
-    await p.goto(`${base}/admin/sliders`);
+    await go(p, `${base}/admin/sliders`);
     await p.click('text=+ Nuevo slider');
     await p.fill('.modal input[name=nombre]', 'Portada');
     await p.click('.modal >> text=Guardar');
@@ -277,16 +318,16 @@ async function main(): Promise<void> {
     await p.locator('.slide-row').nth(1).locator('button[aria-label=Subir]').click();
     await p.waitForFunction(() => document.querySelector('.slide-row')?.textContent?.includes('Segunda'));
     const home = watch(await desktop.newPage(), 'inicio');
-    await home.goto(`${base}/`);
+    await go(home, `${base}/`);
     await home.waitForSelector('[data-carousel]');
     const html = await home.content();
     assert(html.indexOf('Segunda diapositiva') < html.indexOf('Primera diapositiva'), 'orden en el sitio');
-    await home.screenshot({ path: path.join(OUT, '06-inicio.png') });
+    await shot(home, { path: path.join(OUT, '06-inicio.png') });
     await home.close();
   });
 
   await step('Usuarios', 'crear por invitación, editar y desactivar', p, async () => {
-    await p.goto(`${base}/admin/usuarios`);
+    await go(p, `${base}/admin/usuarios`);
     await p.click('text=+ Nuevo usuario');
     await p.fill('.modal input[name=nombre]', 'Laura Comunicaciones');
     await p.fill('.modal input[name=email]', 'laura@example.gov.co');
@@ -308,10 +349,10 @@ async function main(): Promise<void> {
   });
 
   await step('Roles', 'matriz de permisos visible', p, async () => {
-    await p.goto(`${base}/admin/roles`);
+    await go(p, `${base}/admin/roles`);
     await p.click('text=Ver y editar >> nth=1');
     await p.waitForSelector('.perm-matrix');
-    await p.screenshot({ path: path.join(OUT, '07-roles.png'), fullPage: true });
+    await shot(p, { path: path.join(OUT, '07-roles.png'), fullPage: true });
   });
 
   await step('Estadísticas', 'filtros por fecha muestran las cifras de los datos de prueba', p, async () => {
@@ -319,17 +360,17 @@ async function main(): Promise<void> {
       `INSERT INTO visitas (fecha, ruta, visitante, fuente, dispositivo) VALUES
        ('2026-02-01', '/', 'v1', 'directo', 'movil'), ('2026-02-01', '/noticias', 'v1', 'buscador', 'movil'), ('2026-02-02', '/', 'v2', 'directo', 'escritorio')`,
     );
-    await p.goto(`${base}/admin/estadisticas`);
+    await go(p, `${base}/admin/estadisticas`);
     await p.getByLabel('Desde').fill('2026-02-01');
     await p.getByLabel('Hasta').fill('2026-02-02');
     await p.waitForFunction(() => /Visitas\s*3(?!\d)/.test(document.querySelector('.stat-cards')?.textContent ?? ''), undefined, { timeout: 10000 });
     const cards = await p.textContent('.stat-cards');
     assert(/Visitantes[^0-9]*2/.test(cards ?? ''), `tarjetas: ${cards}`);
-    await p.screenshot({ path: path.join(OUT, '08-estadisticas.png'), fullPage: true });
+    await shot(p, { path: path.join(OUT, '08-estadisticas.png'), fullPage: true });
   });
 
   await step('Auditoría', 'consultar y verificar integridad', p, async () => {
-    await p.goto(`${base}/admin/auditoria`);
+    await go(p, `${base}/admin/auditoria`);
     await p.waitForSelector('table');
     await p.click('text=Verificar integridad');
     await p.waitForSelector('.toast');
@@ -337,14 +378,14 @@ async function main(): Promise<void> {
   });
 
   await step('API', 'documentación Swagger del panel', p, async () => {
-    await p.goto(`${base}/admin/api-docs`);
+    await go(p, `${base}/admin/api-docs`);
     await p.waitForSelector('.opblock', { timeout: 15000 });
-    await p.screenshot({ path: path.join(OUT, '09-swagger.png') });
+    await shot(p, { path: path.join(OUT, '09-swagger.png') });
   });
 
   await step('Errores', 'sin conexión con el servidor el panel lo informa', p, async () => {
     // Se visita antes la vista para que su código ya esté en el navegador; sin red solo falla la API.
-    await p.goto(`${base}/admin/paginas`);
+    await go(p, `${base}/admin/paginas`);
     await p.waitForSelector('table');
     await p.click('#admin-menu >> text=Noticias');
     await p.waitForSelector('table');
@@ -360,14 +401,14 @@ async function main(): Promise<void> {
   await step('Persistencia', 'tras reiniciar la aplicación la sesión y los datos siguen', p, async () => {
     await h.restart();
     await startServer();
-    await p.goto(`${base}/admin/noticias`);
+    await go(p, `${base}/admin/noticias`);
     await p.waitForSelector('text=Inscripciones escolares recientes (A)');
   });
 
   await step('Autenticación', 'cerrar sesión y volver a entrar con un código de recuperación', p, async () => {
     await p.click('#btn-salir');
     await p.waitForURL('**/admin/login');
-    await p.goto(`${base}/admin`);
+    await go(p, `${base}/admin`);
     await p.waitForURL('**/admin/login');
     await login(p, 'admin@example.gov.co');
     await p.click('text=Usar un código de recuperación');
@@ -380,20 +421,20 @@ async function main(): Promise<void> {
     await h.db.run(
       `UPDATE sesiones SET data = jsonb_set(data, '{auth,loginAt}', to_jsonb((data->'auth'->>'loginAt')::bigint - 9*3600*1000)) WHERE data ? 'auth'`,
     );
-    await p.goto(`${base}/admin/noticias`);
+    await go(p, `${base}/admin/noticias`);
     await p.waitForURL('**/admin/login', { timeout: 10000 });
   });
 
   await step('Autenticación', 'recuperar la contraseña por correo y entrar con la nueva (MFA sigue exigido)', p, async () => {
     h.mailer.outbox.length = 0;
-    await p.goto(`${base}/admin/login`);
+    await go(p, `${base}/admin/login`);
     await p.click('text=¿Olvidó su contraseña?');
     await p.fill('input[name=email]', 'admin@example.gov.co');
     await p.click('button[type=submit]');
     await p.waitForSelector('h1:has-text("Revise su correo")');
     const link = /https?:\/\/\S+#token=[\w-]+/.exec(h.mailer.outbox[0]?.text ?? '')?.[0] ?? '';
     assert(link, 'correo con enlace');
-    await p.goto(`${base}/admin/restablecer#token=${link.split('#token=')[1]}`);
+    await go(p, `${base}/admin/restablecer#token=${link.split('#token=')[1]}`);
     await p.fill('input[name=password]', 'girasoles en la ventana del colegio');
     await p.fill('input[name=confirmar]', 'girasoles en la ventana del colegio');
     await p.click('button[type=submit]');
@@ -406,7 +447,7 @@ async function main(): Promise<void> {
   });
 
   // --- Editor ---
-  const ed = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ed = await aislar(await browser.newContext({ viewport: { width: 1280, height: 800 } }));
   const ep = watch(await ed.newPage(), 'editor');
   await step('Permisos', 'el editor no ve opciones administrativas y el acceso directo se bloquea', ep, async () => {
     await login(ep, 'editor@example.gov.co');
@@ -420,7 +461,7 @@ async function main(): Promise<void> {
     await ep.waitForSelector('#admin-menu a');
     const items = await ep.$$eval('#admin-menu a', (as) => as.map((a) => a.textContent ?? ''));
     assert(!items.some((i) => /Usuarios|Estadísticas|Auditoría|Roles/.test(i)), `menú: ${items.join(',')}`);
-    await ep.goto(`${base}/admin/usuarios`);
+    await go(ep, `${base}/admin/usuarios`);
     await ep.waitForSelector('h1:has-text("Sin acceso")');
     // Saltando la interfaz: la API también lo niega, incluso con el token CSRF correcto.
     const r = await ep.evaluate(async () => {
@@ -436,10 +477,10 @@ async function main(): Promise<void> {
     );
   });
   await step('Panel', 'QA-11: una sección inexistente del panel no muestra el Resumen', ep, async () => {
-    await ep.goto(`${base}/admin/esta-seccion-no-existe`);
+    await go(ep, `${base}/admin/esta-seccion-no-existe`);
     await ep.waitForSelector('h1:has-text("Sin acceso")');
     for (const ruta of ['/admin/paginas/xyz', '/admin/sliders/0', '/admin/paginas/99999', '/admin/noticias/-1']) {
-      await ep.goto(`${base}${ruta}`); // QA-18: sin mensajes técnicos
+      await go(ep, `${base}${ruta}`); // QA-18: sin mensajes técnicos
       await ep.waitForSelector('h1:has-text("No existe")');
       assert(!/Invalid input|NaN|Too small|params\./.test(await ep.content()), `sin texto técnico en ${ruta}`);
     }
@@ -447,10 +488,10 @@ async function main(): Promise<void> {
   await ed.close();
 
   // --- Sitio público ---
-  const pub = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  const pub = await aislar(await browser.newContext({ viewport: { width: 1366, height: 900 } }));
   const pp = watch(await pub.newPage(), 'publico');
   await step('Sitio público', 'navegación por el menú, búsqueda y paginación', pp, async () => {
-    await pp.goto(`${base}/`);
+    await go(pp, `${base}/`);
     // Submenús desplegables (botón con aria-expanded) y enlaces directos.
     await pp.locator('#menu-principal .nav-btn', { hasText: 'La Secretaría' }).click();
     assert((await pp.locator('#menu-principal .nav-btn', { hasText: 'La Secretaría' }).getAttribute('aria-expanded')) === 'true', 'submenú abierto');
@@ -461,13 +502,13 @@ async function main(): Promise<void> {
       .first()
       .click();
     await pp.waitForURL('**/noticias');
-    await pp.goto(`${base}/buscar?q=inscripciones`);
+    await go(pp, `${base}/buscar?q=inscripciones`);
     assert((await pp.content()).includes('Inscripciones escolares'), 'resultados de búsqueda');
     const r = await pub.request.get(`${base}/noticias?page=2`);
     assert(r.status() === 200, 'paginación');
   });
   await step('Sitio público', 'formulario PQRSD: validación y radicación', pp, async () => {
-    await pp.goto(`${base}/atencion`);
+    await go(pp, `${base}/atencion`);
     await pp.locator('form[action="/atencion/pqrsd"] button[type=submit]').click();
     // La validación del navegador (required) impide el envío vacío; se envía con datos inválidos.
     await pp.evaluate(() => document.querySelectorAll('form[action="/atencion/pqrsd"] [required]').forEach((el) => el.removeAttribute('required')));
@@ -486,10 +527,10 @@ async function main(): Promise<void> {
     assert(/SEM-\d{4}-\d{8}/.test(await pp.content()), 'radicado');
   });
   await step('Errores', 'página 404 con diseño institucional', pp, async () => {
-    const res = await pp.goto(`${base}/esta-pagina-no-existe`);
+    const res = await go(pp, `${base}/esta-pagina-no-existe`);
     assert(res?.status() === 404, 'estado 404');
     assert((await pp.content()).includes('no existe'), 'mensaje');
-    await pp.screenshot({ path: path.join(OUT, '10-404.png') });
+    await shot(pp, { path: path.join(OUT, '10-404.png') });
   });
 
   // --- Vista en dispositivos ---
@@ -511,12 +552,12 @@ async function main(): Promise<void> {
     '/admin/cuenta',
   ];
   for (const [name, opts] of profiles) {
-    const ctx = await browser.newContext({ ...opts, storageState: authState });
+    const ctx = await aislar(await browser.newContext({ ...opts, storageState: authState }));
     const vp = watch(await ctx.newPage(), name);
     await step('Visual', `${name}: sin desborde horizontal, imágenes cargadas y etiquetas en formularios`, vp, async () => {
       const problems: string[] = [];
       for (const url of [...publicPaths, ...adminPaths]) {
-        await vp.goto(base + url);
+        await go(vp, base + url);
         await vp.waitForLoadState('networkidle');
         const r = await vp.evaluate(() => ({
           sw: document.documentElement.scrollWidth,
@@ -530,30 +571,30 @@ async function main(): Promise<void> {
         if (r.broken.length) problems.push(`${url} imágenes rotas ${r.broken.join(' ')}`);
         if (r.unlabeled) problems.push(`${url} ${r.unlabeled} campo(s) sin etiqueta`);
       }
-      await vp.goto(`${base}/`);
-      await vp.screenshot({ path: path.join(OUT, `vista-${name}-inicio.png`), fullPage: true });
-      await vp.goto(`${base}/admin/noticias`);
+      await go(vp, `${base}/`);
+      await shot(vp, { path: path.join(OUT, `vista-${name}-inicio.png`), fullPage: true });
+      await go(vp, `${base}/admin/noticias`);
       await vp.waitForSelector('table, .state');
-      await vp.screenshot({ path: path.join(OUT, `vista-${name}-panel.png`) });
+      await shot(vp, { path: path.join(OUT, `vista-${name}-panel.png`) });
       assert(!problems.length, problems.join(' | '));
     });
     if (name === 'movil') {
       await step('Visual', 'móvil: menú del sitio y del panel se abren', vp, async () => {
-        await vp.goto(`${base}/`);
+        await go(vp, `${base}/`);
         await vp.click('.menu-toggle');
         await vp.waitForSelector('#menu-principal a', { state: 'visible' });
-        await vp.screenshot({ path: path.join(OUT, 'vista-movil-menu-sitio.png') });
-        await vp.goto(`${base}/admin`);
+        await shot(vp, { path: path.join(OUT, 'vista-movil-menu-sitio.png') });
+        await go(vp, `${base}/admin`);
         await vp.click('.admin-menu-toggle');
         await vp.waitForSelector('#admin-menu a', { state: 'visible' });
-        await vp.screenshot({ path: path.join(OUT, 'vista-movil-menu-panel.png') });
+        await shot(vp, { path: path.join(OUT, 'vista-movil-menu-panel.png') });
       });
     }
     await ctx.close();
   }
 
   await step('Accesibilidad', 'QA-06: Escape cierra el submenú y actualiza aria-expanded', pp, async () => {
-    await pp.goto(`${base}/`);
+    await go(pp, `${base}/`);
     const btn = pp.locator('#menu-principal .nav-btn', { hasText: 'La Secretaría' });
     await btn.click();
     assert((await btn.getAttribute('aria-expanded')) === 'true', 'abierto');
@@ -582,13 +623,13 @@ async function main(): Promise<void> {
     assert(!(await sub.isVisible()) && (await btn.getAttribute('aria-expanded')) === 'false', 'QA-19: se cierra al salir con Tab');
   });
   await step('Accesibilidad', 'QA-16: el enlace "Saltar al contenido" mueve el foco al contenido principal', pp, async () => {
-    await pp.goto(`${base}/`);
+    await go(pp, `${base}/`);
     await pp.keyboard.press('Tab');
     await pp.keyboard.press('Enter');
     assert((await pp.evaluate(() => document.activeElement?.id)) === 'contenido', 'foco en <main>');
   });
   await step('Accesibilidad', 'navegación por teclado: enlace para saltar al contenido y foco visible', pp, async () => {
-    await pp.goto(`${base}/`);
+    await go(pp, `${base}/`);
     await pp.keyboard.press('Tab');
     const first = await pp.evaluate(() => ({
       cls: document.activeElement?.className ?? '',
@@ -607,7 +648,7 @@ async function main(): Promise<void> {
   );
 
   await step('Calidad', 'sin errores inesperados en la consola del navegador', null, async () => {
-    const distintos = [...new Set(consoleErrors.map((e) => e.replace(/ \[[^\]]*\]/, '')))];
+    const distintos = [...new Set(consoleErrors.map((e) => e.replace(/^(\S+) \[[^\]]*\]/, '$1')))];
     const detalle = [`${consoleErrors.length} errores (${distintos.length} distintos)`, ...distintos.slice(0, 15), ...[...cspViolations].slice(0, 15)];
     assert(consoleErrors.length === 0, detalle.join(' | '));
   });
@@ -626,12 +667,15 @@ async function main(): Promise<void> {
     pasos: steps,
     erroresConsola: consoleErrors,
     violacionesCsp: [...cspViolations],
+    avisosDeCapturaWebkit: [...artefactosCaptura],
     erroresServidor: serverErrors,
   };
   fs.writeFileSync(path.join(OUT, 'informe-e2e.json'), JSON.stringify(summary, null, 2));
   console.log(
     `\nE2E: ${summary.aprobadas} aprobadas, ${summary.fallidas} fallidas, ${summary.noEjecutadas} no ejecutadas. Informe: ${path.relative(ROOT, OUT)}/informe-e2e.json`,
   );
+  if (artefactosCaptura.size)
+    console.log(`Avisos atribuidos a la captura de pantalla de WebKit (no cuentan como error de la aplicación): ${artefactosCaptura.size}`);
   process.exit(summary.fallidas ? 1 : 0);
 }
 
