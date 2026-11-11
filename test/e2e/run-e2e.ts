@@ -34,17 +34,24 @@ let base = '';
 let port = 0;
 let browser: Browser;
 
+let pasoActual = '(inicio)';
+
 function watch(page: Page, label: string): Page {
   page.on('console', (m) => {
     // Esperados: 4xx provocados a propósito (sesión vencida) y la desconexión simulada de la prueba sin red.
-    if (m.type() === 'error' && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) consoleErrors.push(`${label}: ${m.text()}`);
+    if (m.type() === 'error' && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) {
+      const loc = m.location();
+      const donde = loc.url ? ` @ ${loc.url.replace(base, '')}:${loc.lineNumber}` : ` @ ${page.url().replace(base, '')}`;
+      consoleErrors.push(`${label} [${pasoActual}]: ${m.text()}${donde}`);
+    }
   });
-  page.on('pageerror', (e) => consoleErrors.push(`${label} pageerror: ${e.message}`));
+  page.on('pageerror', (e) => consoleErrors.push(`${label} [${pasoActual}] pageerror: ${e.message}`));
   return page;
 }
 
 async function step(modulo: string, nombre: string, page: Page | null, fn: () => Promise<void>): Promise<void> {
   const t = Date.now();
+  pasoActual = `${modulo}: ${nombre}`;
   try {
     await fn();
     steps.push({ modulo, nombre, resultado: 'aprobada', ms: Date.now() - t });

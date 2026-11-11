@@ -106,7 +106,7 @@ async function edit(main, ctx, id) {
   const canPublish = ctx.can('pages.publish');
   const canSave = isNew ? ctx.can('pages.create') : ctx.can('pages.update') && (page.estado !== 'publicada' || canPublish);
   const titulo = input({ name: 'titulo', value: page.titulo, maxlength: 160 });
-  const slug = input({ name: 'slug', value: page.slug, maxlength: 80, pattern: '[a-z0-9-]+', disabled: page.sistema });
+  const slug = input({ name: 'slug', value: page.slug, maxlength: 80, pattern: '[a-z0-9\\-]+', disabled: page.sistema });
   const resumen = textarea({ name: 'resumen', rows: 2, maxlength: 300 }, page.resumen);
   const estado = select([['borrador', 'Borrador (no visible al público)'], ...(canPublish ? [['publicada', 'Publicada']] : [])], page.estado, {
     name: 'estado',
