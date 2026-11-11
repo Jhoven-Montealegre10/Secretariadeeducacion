@@ -44,7 +44,8 @@ jobs:
           node-version: 24
           cache: npm
       - name: Cliente de PostgreSQL (psql)
-        run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+        # La imagen ubuntu-24.04 ya incluye psql; solo se instala si falta (evita depender de los espejos de apt).
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
@@ -88,7 +89,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+      - name: Cliente de PostgreSQL (psql)
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run build && npx tsc -p tsconfig.json
