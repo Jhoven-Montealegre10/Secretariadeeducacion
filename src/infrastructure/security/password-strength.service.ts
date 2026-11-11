@@ -52,7 +52,8 @@ export class PasswordStrength {
   });
 
   evaluate = (password: string, userInputs: string[] = []): { score: number } => {
-    const result = this.checker.check(String(password).slice(0, 128), datosPersonales(userInputs));
+    // Las palabras institucionales se pasan siempre: los datos del usuario no las reemplazan.
+    const result = this.checker.check(String(password).slice(0, 128), [...PROPIAS, ...datosPersonales(userInputs)]);
     return { score: result.score };
   };
 }

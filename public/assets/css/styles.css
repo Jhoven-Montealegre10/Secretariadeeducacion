@@ -323,6 +323,10 @@ p {
 .has-sub.open > .submenu {
   display: block;
 }
+/* Escape cierra el submenú aunque el foco siga en su botón (se reabre al volver a abrirlo o al salir del menú). */
+.has-sub.cerrado-teclado > .submenu {
+  display: none;
+}
 
 /* ---------- Hero ---------- */
 .hero {

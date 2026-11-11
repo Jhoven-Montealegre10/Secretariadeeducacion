@@ -67,8 +67,13 @@ async function render() {
   }
   main.replaceChildren(h('p', { class: 'state state--loading', role: 'status' }, 'Cargando…'));
   try {
-    const mod = await route.load();
     const rest = pathname.slice(route.path.length).split('/').filter(Boolean);
+    // Solo se aceptan identificadores numéricos (o "nueva" en páginas y noticias): lo demás no existe.
+    if (rest[0] && !/^\d{1,10}$/.test(rest[0]) && rest[0] !== 'nueva') {
+      main.replaceChildren(h('h1', {}, 'No existe'), h('p', {}, 'El elemento que busca no existe o fue eliminado.'));
+      return;
+    }
+    const mod = await route.load();
     await mod.render(main, ctx, rest);
   } catch (err) {
     main.replaceChildren(h('h1', {}, 'Error'), errorBox(err, render));

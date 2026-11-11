@@ -147,6 +147,17 @@ describe('Política de contraseñas', () => {
   });
 });
 
+describe('Contraseñas derivadas de datos personales o de la entidad (QA-03)', () => {
+  const evaluar = () => ({ score: 4 });
+  test('se rechazan aunque el evaluador las puntúe alto', () => {
+    for (const pw of ['QA Editor Dos QA Editor Dos', 'secretaria educacion ibague', 'Secretaría de Educación 2026', 'alcaldia de ibague tolima'])
+      assert.ok(validarPassword(pw, evaluar, ['qa-editor@example.gov.co', 'QA Editor Dos']), pw);
+  });
+  test('una frase propia que menciona la entidad sí se acepta', () => {
+    assert.equal(validarPassword('la secretaria toma cafe en el parque', evaluar, ['ana@example.gov.co', 'Ana Pérez']), null);
+  });
+});
+
 describe('Permisos', () => {
   test('el catálogo contiene todos los permisos y solo esos son válidos', () => {
     const fromCatalog = catalogo().flatMap((m) => m.acciones.map((a) => a.permiso));

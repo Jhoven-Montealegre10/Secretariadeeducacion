@@ -17,6 +17,7 @@
   document.querySelectorAll('.has-sub > .nav-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var li = btn.parentElement;
+      li.classList.remove('cerrado-teclado');
       var isOpen = li.classList.contains('open');
       document.querySelectorAll('.has-sub.open').forEach(function (o) {
         o.classList.remove('open');
@@ -36,10 +37,19 @@
       });
     }
   });
+  document.querySelectorAll('.has-sub').forEach(function (li) {
+    li.addEventListener('focusout', function (e) {
+      if (!li.contains(e.relatedTarget)) li.classList.remove('cerrado-teclado');
+    });
+    li.addEventListener('mouseleave', function () {
+      li.classList.remove('cerrado-teclado');
+    });
+  });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.has-sub.open').forEach(function (o) {
+      document.querySelectorAll('.has-sub.open, .has-sub:focus-within').forEach(function (o) {
         o.classList.remove('open');
+        o.classList.add('cerrado-teclado');
         var b = o.querySelector('.nav-btn');
         b.setAttribute('aria-expanded', 'false');
         if (o.contains(document.activeElement)) b.focus(); // el foco vuelve al botón que abrió el submenú

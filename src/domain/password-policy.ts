@@ -7,6 +7,14 @@ export const PASSWORD_MIN = 12;
 export const PASSWORD_MAX = 128;
 const MIN_SCORE = 3;
 
+/** Palabras de la entidad: una contraseña hecha solo de ellas es fácil de adivinar para un atacante dirigido. */
+export const PALABRAS_INSTITUCIONALES = [
+  'secretaria de educacion municipal',
+  'alcaldia de ibague tolima',
+  'semibague portal gobierno colombia',
+  'administrador administradora editor editora usuario contraseña clave panel',
+];
+
 export type StrengthEvaluator = (password: string, userInputs: string[]) => { score: number };
 
 export function validarPassword(password: unknown, evaluar: StrengthEvaluator, datosUsuario: Array<string | undefined> = []): string | null {
@@ -14,7 +22,8 @@ export function validarPassword(password: unknown, evaluar: StrengthEvaluator, d
   if (value.length < PASSWORD_MIN) return `La contraseña debe tener al menos ${PASSWORD_MIN} caracteres.`;
   if (value.length > PASSWORD_MAX) return `La contraseña admite máximo ${PASSWORD_MAX} caracteres.`;
   const datos = datosUsuario.filter((d): d is string => !!d);
-  if (derivadaDeDatos(value, datos)) return 'La contraseña no puede basarse en su nombre o su correo. Use una frase propia.';
+  if (derivadaDeDatos(value, [...datos, ...PALABRAS_INSTITUCIONALES]))
+    return 'La contraseña no puede basarse en su nombre, su correo ni en el nombre de la entidad. Use una frase propia.';
   const { score } = evaluar(value, datos);
   if (score < MIN_SCORE) return 'La contraseña es demasiado común o fácil de adivinar. Use una frase larga con palabras poco relacionadas.';
   return null;

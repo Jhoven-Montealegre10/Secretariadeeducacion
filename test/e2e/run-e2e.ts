@@ -415,6 +415,9 @@ async function main(): Promise<void> {
   await step('Panel', 'QA-11: una sección inexistente del panel no muestra el Resumen', ep, async () => {
     await ep.goto(`${base}/admin/esta-seccion-no-existe`);
     await ep.waitForSelector('h1:has-text("Sin acceso")');
+    await ep.goto(`${base}/admin/paginas/xyz`); // QA-18: sin mensajes técnicos
+    await ep.waitForSelector('h1:has-text("No existe")');
+    assert(!/Invalid input|NaN/.test(await ep.content()), 'sin texto técnico');
   });
   await ed.close();
 
@@ -531,6 +534,7 @@ async function main(): Promise<void> {
     assert((await btn.getAttribute('aria-expanded')) === 'true', 'abierto');
     await pp.keyboard.press('Escape');
     assert((await btn.getAttribute('aria-expanded')) === 'false', 'aria-expanded tras Escape');
+    assert(!(await pp.locator('#menu-principal .has-sub', { has: btn }).locator('.submenu').isVisible()), 'QA-06b: el submenú queda oculto');
   });
   await step('Accesibilidad', 'QA-16: el enlace "Saltar al contenido" mueve el foco al contenido principal', pp, async () => {
     await pp.goto(`${base}/`);
