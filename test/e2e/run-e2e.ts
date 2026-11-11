@@ -36,8 +36,24 @@ let browser: Browser;
 
 let pasoActual = '(inicio)';
 
+const cspViolations = new Set<string>();
+
 function watch(page: Page, label: string): Page {
+  // Detalle de cada violación de CSP (directiva, elemento y muestra del contenido bloqueado) para poder diagnosticarla.
+  void page.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (e) => {
+      const t = e.target as Element | null;
+      const el =
+        t && t.nodeName
+          ? `${t.nodeName.toLowerCase()}${t instanceof Element && t.id ? '#' + t.id : ''}${t instanceof Element && t.className ? '.' + String(t.className).split(' ').join('.') : ''}`
+          : '?';
+      console.warn(
+        `CSP-VIOLATION ${e.violatedDirective} bloqueado=${e.blockedURI || '-'} elemento=${el} origen=${e.sourceFile || '-'}:${e.lineNumber} muestra=${JSON.stringify(e.sample || '')}`,
+      );
+    });
+  });
   page.on('console', (m) => {
+    if (m.text().startsWith('CSP-VIOLATION')) cspViolations.add(`${label} ${page.url().replace(base, '')}: ${m.text()}`);
     // Esperados: 4xx provocados a propósito (sesión vencida) y la desconexión simulada de la prueba sin red.
     if (m.type() === 'error' && !/status of 4\d\d|ERR_INTERNET_DISCONNECTED/.test(m.text())) {
       const loc = m.location();
@@ -591,7 +607,9 @@ async function main(): Promise<void> {
   );
 
   await step('Calidad', 'sin errores inesperados en la consola del navegador', null, async () => {
-    assert(consoleErrors.length === 0, consoleErrors.slice(0, 5).join(' | '));
+    const distintos = [...new Set(consoleErrors.map((e) => e.replace(/ \[[^\]]*\]/, '')))];
+    const detalle = [`${consoleErrors.length} errores (${distintos.length} distintos)`, ...distintos.slice(0, 15), ...[...cspViolations].slice(0, 15)];
+    assert(consoleErrors.length === 0, detalle.join(' | '));
   });
   await step('Calidad', 'sin errores en el registro del servidor', null, async () => {
     assert(serverErrors.length === 0, serverErrors.slice(0, 3).join(' | '));
@@ -607,6 +625,7 @@ async function main(): Promise<void> {
     noEjecutadas: steps.filter((s) => s.resultado === 'no_ejecutada').length,
     pasos: steps,
     erroresConsola: consoleErrors,
+    violacionesCsp: [...cspViolations],
     erroresServidor: serverErrors,
   };
   fs.writeFileSync(path.join(OUT, 'informe-e2e.json'), JSON.stringify(summary, null, 2));
