@@ -95,9 +95,10 @@ Cada corrección tiene una prueba de regresión y la re-verificó el mismo agent
 | QA-15 | Mejora | `security.txt` sin `Expires` | Agregado | integración | Corregido |
 | QA-16 | Mejora | Saltar al contenido no movía el foco | `tabindex="-1"` en `<main>` | E2E | Corregido |
 | QA-17 | Mejora | Consulta de PQRSD estricta con mayúsculas y espacios | Normalización | integración | Corregido |
-| QA-18 | Baja | `/admin/paginas/xyz` mostraba un mensaje técnico (hallado en la re-verificación) | «No existe» para identificadores no numéricos | E2E | Ver §5.3 |
+| QA-18 | Baja | `/admin/paginas/xyz` (y variantes: 0, negativos, inexistentes) mostraba un mensaje técnico | «No existe» para todo identificador inválido o inexistente | E2E | Corregido (3.ª ronda) |
+| QA-19 | Baja | El submenú no se cerraba al salir con Tab (2.ª ronda) | Cierre al perder el foco | E2E | Corregido (3.ª ronda) |
 
-\* QA-03 y QA-06 se completaron en una segunda ronda: la observación sobre palabras institucionales y QA-06b.
+\* QA-03 y QA-06 necesitaron rondas adicionales: palabras institucionales, QA-06b y QA-06c (ver §5.3).
 
 ### 5.2 Encontrados durante el desarrollo de esta fase
 
@@ -112,9 +113,21 @@ Cada corrección tiene una prueba de regresión y la re-verificó el mismo agent
 Los fallos que aparecieron al escribir las pruebas E2E fueron de la propia prueba (selectores, una expresión regular
 y un agente HTTP atado a un servidor cerrado); la aplicación se comportaba correctamente, como muestran las capturas.
 
-### 5.3 Segunda re-verificación (QA-06b, QA-18 y contraseñas institucionales)
+### 5.3 Segunda y tercera re-verificación
 
-Resultado pendiente de anotar: ver la sección 6.1 del informe independiente.
+- **Segunda ronda:** QA-06b quedó corregido. QA-18 y la regla de palabras institucionales quedaron parciales. Aparecieron dos defectos nuevos de severidad baja:
+  - QA-06c: el submenú se veía abierto con el foco en el botón aunque `aria-expanded` era `false`.
+  - QA-19: el submenú no se cerraba al salir con Tab.
+- **Correcciones:**
+  - El submenú depende solo de su estado explícito: se quitó la regla CSS `:focus-within` y se cierra al salir con Tab o con Escape.
+  - Todo identificador inválido o inexistente del panel muestra «No existe».
+  - Para aceptar una contraseña deben quedar al menos 8 letras propias al quitar los datos del usuario, las palabras de la entidad y los dígitos.
+  - En esta ronda se detectó además que la verificación E2E de QA-06b no comprobaba nada (su localizador no encontraba el submenú). Se corrigió, y ahora la prueba exige encontrar exactamente un submenú.
+- **Tercera ronda:** QA-06c, QA-19, las variantes de QA-18 y la regla de contraseñas quedaron **corregidos**, sin regresiones ni defectos nuevos y sin errores en el registro del servidor.
+
+**Estado final:** los 20 defectos reportados (QA-01 a QA-19, más QA-06b y QA-06c) están corregidos y re-verificados por el agente independiente.
+
+**Observación O-5 (abierta, no es un defecto):** la frase «tolima ibague colegios publicos» se acepta: mezcla dos palabras de la entidad con dos comunes y tiene más de 8 letras propias. Se mantiene así a propósito. Las frases largas son la recomendación de NIST SP 800-63B, y las demás defensas siguen activas: Argon2id, MFA obligatorio, bloqueo tras 5 intentos y límites por IP. Si la entidad quiere una regla más estricta, puede subir el mínimo de letras propias en `src/domain/password-policy.ts`.
 
 ## 6. Limitaciones y lo que no se ejecutó (no cuenta como aprobado)
 
