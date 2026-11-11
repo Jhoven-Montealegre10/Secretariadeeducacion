@@ -277,7 +277,7 @@ async function main(): Promise<void> {
     await p.fill('.modal input[name=nombre]', 'Laura Comunicaciones SEM');
     await p.locator('.modal input[type=checkbox]').last().uncheck();
     await p.click('.modal >> text=Guardar');
-    await p.waitForSelector('.toast--ok');
+    await p.waitForSelector('.toast--ok:has-text("Usuario actualizado")');
     assert(
       (await h.db.one<{ nombre: string; activo: boolean }>("SELECT nombre, activo FROM usuarios WHERE email = 'laura@example.gov.co'"))?.activo === false,
       'desactivado',
@@ -415,9 +415,11 @@ async function main(): Promise<void> {
   await step('Panel', 'QA-11: una sección inexistente del panel no muestra el Resumen', ep, async () => {
     await ep.goto(`${base}/admin/esta-seccion-no-existe`);
     await ep.waitForSelector('h1:has-text("Sin acceso")');
-    await ep.goto(`${base}/admin/paginas/xyz`); // QA-18: sin mensajes técnicos
-    await ep.waitForSelector('h1:has-text("No existe")');
-    assert(!/Invalid input|NaN/.test(await ep.content()), 'sin texto técnico');
+    for (const ruta of ['/admin/paginas/xyz', '/admin/sliders/0', '/admin/paginas/99999', '/admin/noticias/-1']) {
+      await ep.goto(`${base}${ruta}`); // QA-18: sin mensajes técnicos
+      await ep.waitForSelector('h1:has-text("No existe")');
+      assert(!/Invalid input|NaN|Too small|params\./.test(await ep.content()), `sin texto técnico en ${ruta}`);
+    }
   });
   await ed.close();
 
@@ -532,9 +534,29 @@ async function main(): Promise<void> {
     const btn = pp.locator('#menu-principal .nav-btn', { hasText: 'La Secretaría' });
     await btn.click();
     assert((await btn.getAttribute('aria-expanded')) === 'true', 'abierto');
+    await pp.mouse.move(0, 0); // sin el puntero encima: se verifica el estado por teclado, no el :hover
     await pp.keyboard.press('Escape');
     assert((await btn.getAttribute('aria-expanded')) === 'false', 'aria-expanded tras Escape');
-    assert(!(await pp.locator('#menu-principal .has-sub', { has: btn }).locator('.submenu').isVisible()), 'QA-06b: el submenú queda oculto');
+    const sub = pp
+      .locator('#menu-principal .has-sub')
+      .filter({ has: pp.locator('.nav-btn', { hasText: 'La Secretaría' }) })
+      .locator('.submenu');
+    assert((await sub.count()) === 1, 'el localizador del submenú encuentra exactamente uno');
+    assert(!(await sub.isVisible()), 'QA-06b: el submenú queda oculto');
+    // QA-06c: con el foco en el botón, la vista coincide con aria-expanded y un segundo clic cierra.
+    await pp.mouse.move(0, 0);
+    await btn.click();
+    assert((await sub.isVisible()) && (await btn.getAttribute('aria-expanded')) === 'true', 'abierto tras clic');
+    await btn.click();
+    await pp.mouse.move(0, 0);
+    assert(!(await sub.isVisible()) && (await btn.getAttribute('aria-expanded')) === 'false', 'QA-06c: segundo clic cierra');
+    // QA-19: al salir del submenú con Tab, se cierra.
+    await btn.focus();
+    await pp.keyboard.press('Enter');
+    assert(await sub.isVisible(), 'abierto con Enter');
+    const links = await sub.locator('a').count();
+    for (let i = 0; i <= links; i++) await pp.keyboard.press('Tab');
+    assert(!(await sub.isVisible()) && (await btn.getAttribute('aria-expanded')) === 'false', 'QA-19: se cierra al salir con Tab');
   });
   await step('Accesibilidad', 'QA-16: el enlace "Saltar al contenido" mueve el foco al contenido principal', pp, async () => {
     await pp.goto(`${base}/`);

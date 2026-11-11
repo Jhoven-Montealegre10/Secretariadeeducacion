@@ -36,7 +36,7 @@ const plano = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '');
 
-/** true si, al quitar las palabras del nombre/correo y los dígitos, casi no queda nada propio. */
+/** true si, al quitar las palabras del nombre/correo (o de la entidad) y los dígitos, quedan menos de 8 letras propias. */
 export function derivadaDeDatos(password: string, datosUsuario: readonly string[]): boolean {
   const palabras = datosUsuario
     .flatMap((d) => d.split(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ]+/))
@@ -46,5 +46,5 @@ export function derivadaDeDatos(password: string, datosUsuario: readonly string[
   if (!palabras.length) return false;
   let resto = plano(password);
   for (const w of palabras) resto = resto.split(w).join('');
-  return resto.replace(/\d/g, '').length < 4;
+  return resto.replace(/\d/g, '').length < 8;
 }
