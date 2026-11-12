@@ -1,5 +1,9 @@
 # Informe de auditoría de seguridad
 
+> **Actualización de seguridad (2026-11-10):** la revisión posterior confirmó cuatro fallos de lógica
+> adicionales y endureció las cargas sin antimalware. Las correcciones y su validación se detallan en §7.
+> Las cifras y conclusiones de las secciones anteriores corresponden a la revisión inicial.
+
 Fecha: 2026-11-10 · Alcance: código del repositorio (rama `claude/kind-mendel-0rz0tx`), sitio público, panel, API v1,
 base de datos y almacenamiento. Referencias: **OWASP ASVS 4.0.3 nivel 2** (verificación) y **OWASP Top 10 2021** (riesgos).
 
@@ -153,3 +157,32 @@ Gravedad: Crítica / Alta / Media / Baja / Informativa. Estado de la nueva verif
 | F4-05 | Baja | La exportación de archivos en simulacro podía dejar copias sin referencia | Documentado en el runbook (las copias son idénticas e inofensivas) | — |
 
 Hallazgos de la revisión de QA independiente: ver `docs/QA-INFORME.md` §5.
+
+## 8. Correcciones de la revisión posterior en `main` (versión 3, 2026-11-10) y su traslado a la versión 4
+
+Los cuatro fallos de lógica se reprodujeron primero con datos ficticios, base de datos en memoria y archivos
+temporales. Después se añadieron pruebas de regresión que exigen su rechazo, junto con flujos legítimos.
+
+| Hallazgo | Corrección | Evidencia |
+|---|---|---|
+| Un rol con `users.update` podía tomar una cuenta de administrador mediante cambio de correo, reset MFA e invitación | Todas las modificaciones, eliminaciones, resets MFA e invitaciones comprueban el rol actual de la cuenta objetivo. Solo un administrador gestiona a otro administrador; para otras cuentas se exige poseer todos sus permisos | Respuestas 403 sin cambios ni correo enviado; administración legítima permitida |
+| Una segunda sesión pendiente podía sobrescribir el MFA recién activado | El primer factor guarda `authVersion`; las sesiones pendientes se revalidan. La activación comprueba estado y versión dentro de una transacción, distingue alta inicial de reemplazo y revoca las demás sesiones | Segunda activación rechazada por HTTP y por servicio; el cambio legítimo con reautenticación conserva el acceso |
+| Un enlace anterior al cambio de contraseña seguía vigente | Cambio y recuperación de contraseña invalidan los tokens anteriores de forma transaccional. Cambiar correo, rol, desactivar o resetear MFA también revoca enlaces | Token anterior rechazado; uno nuevo permite recuperar acceso y sigue exigiendo MFA |
+| Los archivos privados de noticias futuras eran públicos antes de la fecha | La descarga comprueba la fecha y estado actuales de la noticia, además del registro de usos | Imagen y miniatura: 404 antes de la fecha, 200 al llegar, 404 al volver a borrador; se respeta la visibilidad pública explícita |
+| P-02: se permitían cargas sin escáner en producción | `NODE_ENV=production` exige antimalware en cada carga: ausencia/error/timeout devuelve 503; infección se rechaza. Desarrollo y pruebas mantienen el modo local | Pruebas de limpio, infectado, error, timeout, eliminación del temporal y selección automática de la política de producción |
+
+Validación: **78/78 pruebas** en Windows con Node.js 24.14.1; ESLint y comprobación de tipos sin errores.
+`npm audit --json`: **0 vulnerabilidades conocidas**. Pruebas nuevas en `tests/security-regressions.test.js`.
+La prueba del límite total de carga verifica directamente el middleware antes de leer bytes: el envío de 28 MB
+contra una conexión rechazada temprano producía `ECONNRESET` en el cliente de pruebas de Windows.
+
+La integración con ClamAV real y sus firmas se debe configurar y probar en preproducción; las pruebas locales
+simulan los resultados del ejecutable y comprueban la política real de producción sin un comando configurado.
+No se ha ejecutado un pentest contra infraestructura desplegada ni un escaneo DAST en esta revisión.
+
+**Traslado a la versión 4 (TypeScript + NestJS + PostgreSQL).** Las cinco correcciones se implementaron también en
+la versión 4: `UserService.requireManageableUser`, `AuthService.confirmEnrollment` (transacción con bloqueo de fila,
+versión de autenticación y modo alta/reemplazo), descarte del primer ingreso pendiente en `app.setup.ts`,
+`CredentialRepository.revokeResetTokens` y `createMalwareScan` (obligatorio en producción, 503). La regla de la
+imagen de noticias futuras ya existía en v4 (QA-13). Regresiones contra PostgreSQL real en
+`test/integration/seguridad-regresiones.test.ts` y del escáner en `test/unit/infrastructure.test.ts`.

@@ -8,9 +8,9 @@
     "node": ">=24.11.0 <25 || >=26.0.0 <27"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "start": "node dist/src/main.js",
-    "dev": "npm run build && NODE_ENV=development node --enable-source-maps dist/src/main.js",
+    "dev": "npm run build && node --enable-source-maps dist/src/main.js",
     "migrate": "npm run build && typeorm -d dist/src/infrastructure/database/migration-cli.js migration:run",
     "migrate:status": "npm run build && typeorm -d dist/src/infrastructure/database/migration-cli.js migration:show",
     "migrate:revert": "npm run build && typeorm -d dist/src/infrastructure/database/migration-cli.js migration:revert",
@@ -26,12 +26,14 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.ts\" \"public/**/*.{js,css}\" \"docs/**/*.md\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:unit": "tsc -p tsconfig.json && NODE_ENV=test node --enable-source-maps --test dist/test/unit/*.test.js",
-    "test:integration": "tsc -p tsconfig.json && NODE_ENV=test node --enable-source-maps --test --test-concurrency=1 dist/test/integration/*.test.js",
-    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node scripts/run-tests.js unit",
+    "test:integration": "node scripts/run-tests.js integration",
+    "test": "node scripts/run-tests.js all",
+    "test:coverage": "c8 node scripts/run-tests.js all",
     "test:e2e": "node dist/test/e2e/run-e2e.js",
     "test:load": "node dist/test/load/run-load.js",
-    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm test && npm run openapi:check && npm audit --omit=dev"
+    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm test && npm run openapi:check && npm audit --omit=dev",
+    "quality": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:coverage && npm run openapi:check && npm audit"
   },
   "dependencies": {
     "@nestjs/common": "12.3.2",
@@ -74,6 +76,7 @@
     "@types/sanitize-html": "2.16.0",
     "@types/supertest": "6.0.3",
     "autocannon": "9.0.0",
+    "c8": "12.0.0",
     "eslint": "10.12.0",
     "eslint-plugin-security": "4.2.1",
     "globals": "17.14.0",
@@ -84,6 +87,11 @@
     "typescript-eslint": "8.72.2"
   },
   "overrides": {
-    "minimatch": "11.0.6"
+    "minimatch": "11.0.6",
+    "c8": {
+      "test-exclude": {
+        "glob": "^14.0.2"
+      }
+    }
   }
 }

@@ -14,7 +14,7 @@ No use datos personales reales fuera de producción; anonimice `pqrsd` y `usuari
 ## 2. Requisitos
 
 - Linux, **Node.js 24 LTS** (o 26 LTS), **PostgreSQL 16** (15–18), proxy inverso con TLS (Nginx/Apache), ClamAV
-  (recomendado), SMTP institucional. Usuario de sistema sin privilegios (`semibague`), sin shell.
+  (obligatorio para cargar archivos en producción), SMTP institucional. Usuario de sistema sin privilegios (`semibague`), sin shell.
 - Carpeta de archivos fuera del código (p. ej. `/var/lib/semibague/{media,uploads}`) propiedad de `semibague`, `0750`.
 
 ## 3. Instalación y comandos
@@ -39,7 +39,16 @@ npm start                      # node dist/src/main.js
 | `npm run test:e2e` / `test:load` | navegador (Playwright) / carga (autocannon), en entorno de pruebas |
 | `npm run openapi:export` / `openapi:check` | regenerar / verificar `docs/openapi*.json` |
 | `npm run verify` | todo lo anterior salvo E2E y carga, más `npm audit` |
+| `npm run test:coverage` / `quality` | pruebas con cobertura (c8) / verificación completa con cobertura |
 | `npm run backup:sqlite`, `migrate:from-sqlite` | migración desde la versión 3 (ver `docs/migracion/`) |
+
+### Antimalware (obligatorio en producción)
+
+Configure `MALWARE_SCAN_COMMAND` con la ruta absoluta de `clamdscan` y mantenga sus firmas actualizadas.
+Con `NODE_ENV=production`, si el comando está vacío o falla (incluido un tiempo agotado), las cargas se rechazan
+con `503 MALWARE_SCAN_UNAVAILABLE` y no se guarda nada. El portal y el acceso al panel siguen disponibles. Un archivo
+detectado como infectado se rechaza con `422`. Desarrollo y pruebas permiten trabajar sin el escáner instalado.
+Antes de publicar, compruebe el escaneo con ClamAV real y una muestra EICAR en preproducción.
 
 ## 4. PostgreSQL seguro
 

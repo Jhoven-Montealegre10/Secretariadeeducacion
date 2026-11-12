@@ -39,10 +39,16 @@ npm run dev                                 # http://localhost:3000 — panel en
 
 ## Calidad y verificación
 
+La guía [Calidad y pruebas](docs/CALIDAD-Y-PRUEBAS.md) explica SonarQube for IDE, las tareas de VS Code y cómo
+consultar la cobertura. Los scripts funcionan igual en Windows, Linux y macOS; en PowerShell use `npm.cmd`
+si se bloquea `npm.ps1`.
+
 ```bash
 npm run verify            # lint + formato + tipos + build + pruebas + contrato OpenAPI + npm audit
-npm run test:unit         # 55 pruebas de dominio, infraestructura y servicios (sin BD)
-npm run test:integration  # 104 pruebas contra PostgreSQL real (requiere TEST_PG_ADMIN_URL de un servidor de PRUEBAS)
+npm run quality           # lo mismo, con cobertura (coverage/index.html y coverage/lcov.info)
+npm run test:unit         # 60 pruebas de dominio, infraestructura y servicios (sin BD)
+npm run test:integration  # 123 pruebas contra PostgreSQL real (requiere TEST_PG_ADMIN_URL de un servidor de PRUEBAS)
+npm run test:coverage     # unitarias + integración con cobertura (c8)
 npm run test:e2e          # navegador real (Playwright): panel, sitio, permisos, escritorio/tableta/móvil
 npm run test:load         # carga con autocannon en entorno autorizado
 ```

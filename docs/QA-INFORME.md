@@ -25,8 +25,8 @@ métricas, migración SQLite → PostgreSQL, respaldo y restauración de SQLite,
 | Tipo | Herramienta | Aprobadas | Fallidas | No ejecutadas / bloqueadas |
 |---|---|---|---|---|
 | Estático: lint (ESLint + reglas de seguridad), formato, tipos estrictos, compilación | ESLint, Prettier, `tsc` | sin errores | 0 | — |
-| Unitarias (dominio, infraestructura, servicios con dependencias simuladas) | `node:test` | **57** | 0 | 0 |
-| Integración contra PostgreSQL real (migraciones, migración de datos, repositorios, transacciones, sesiones, MFA, permisos, API, archivos, concurrencia, contrato OpenAPI, regresiones de QA) | `node:test` + supertest | **115** | 0 | 0 |
+| Unitarias (dominio, infraestructura, servicios con dependencias simuladas, escáner antimalware) | `node:test` | **60** | 0 | 0 |
+| Integración contra PostgreSQL real (migraciones, migración de datos, repositorios, transacciones, sesiones, MFA, permisos, API, archivos, concurrencia, contrato OpenAPI, regresiones de QA y de seguridad) | `node:test` + supertest | **123** | 0 | 0 |
 | E2E en navegador (panel, sitio, permisos saltando la interfaz, sin conexión, reinicio, escritorio/tableta/móvil, accesibilidad, consola y registro) | Playwright (Chromium) | **32** | 0 | 2 (ver §6) |
 | Contrato OpenAPI sincronizado con el código | `npm run openapi:check` | 70 operaciones (6 públicas) | 0 | — |
 | Dependencias | `npm audit` | 0 vulnerabilidades | — | — |
@@ -142,6 +142,23 @@ y un agente HTTP atado a un servidor cerrado); la aplicación se comportaba corr
 **Estado final:** los 20 defectos reportados (QA-01 a QA-19, más QA-06b y QA-06c) están corregidos y re-verificados por el agente independiente.
 
 **Observación O-5 (abierta, no es un defecto):** la frase «tolima ibague colegios publicos» se acepta: mezcla dos palabras de la entidad con dos comunes y tiene más de 8 letras propias. Se mantiene así a propósito. Las frases largas son la recomendación de NIST SP 800-63B, y las demás defensas siguen activas: Argon2id, MFA obligatorio, bloqueo tras 5 intentos y límites por IP. Si la entidad quiere una regla más estricta, puede subir el mínimo de letras propias en `src/domain/password-policy.ts`.
+
+### Correcciones de seguridad recibidas desde `main`
+
+`main` recibió, sobre la versión 3 en JavaScript, correcciones de seguridad (commit `140b6b5`) que la versión 4 no
+tenía. Al fusionar se detectaron y se trasladaron a TypeScript, con pruebas de regresión contra PostgreSQL
+(`test/integration/seguridad-regresiones.test.ts`, 8 pruebas, y 3 pruebas unitarias del escáner):
+
+- **Escalada en la gestión de usuarios (alta):** un rol con `users.update` podía cambiar el correo, restablecer
+  el MFA o reenviar la invitación de un administrador o de un usuario con más permisos, y así tomar su cuenta.
+- **Enrolamiento MFA concurrente (alta):** una segunda sesión de primer ingreso podía sobrescribir el segundo
+  factor que la otra acababa de configurar.
+- **Enlaces de recuperación vigentes (media):** cambiar la contraseña, el correo o el rol no invalidaba los
+  enlaces de recuperación enviados antes.
+- **Antimalware opcional en producción (media):** sin escáner configurado, las cargas se aceptaban sin analizar.
+  Ahora responden 503.
+
+Cobertura medida con c8 (versión 4): 94,13 % de líneas, 89,70 % de funciones y 85,39 % de ramas.
 
 ## 6. Limitaciones y lo que no se ejecutó (no cuenta como aprobado)
 

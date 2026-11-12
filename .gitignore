@@ -8,3 +8,5 @@ storage/*
 dist/
 test-results/
 *.tsbuildinfo
+coverage/
+.scannerwork/
