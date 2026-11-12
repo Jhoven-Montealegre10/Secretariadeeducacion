@@ -25,11 +25,11 @@ export class Mailer {
   private readonly logger = new Logger('Correo');
 
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
-    // En producción el correo exige TLS (STARTTLS o smtps://) con versión mínima 1.2: nunca en texto plano.
+    // El correo exige siempre TLS (STARTTLS o smtps://) con versión mínima 1.2 y certificado válido: nunca en texto plano.
     this.transport = config.mail.smtpUrl
       ? nodemailer.createTransport({
           url: config.mail.smtpUrl,
-          requireTLS: config.isProd,
+          requireTLS: true,
           tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
         } as SMTPTransport.Options)
       : null;

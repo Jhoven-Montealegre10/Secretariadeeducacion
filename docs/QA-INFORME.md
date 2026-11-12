@@ -169,7 +169,7 @@ Cobertura medida con c8 (versión 4): 94,13 % de líneas, 89,70 % de funciones y
 | Expiración real a los 30 min y 8 h, desbloqueo a los 15 min | Esperas largas; se simularon manipulando la sesión y el bloqueo en la BD | Prueba manual en preproducción |
 | SMTP real y antimalware (ClamAV) | No configurados en el entorno de pruebas | Lista de verificación de `DESPLIEGUE.md` §10 (EICAR) |
 | Cookie `__Host-`/`Secure` y HSTS | Solo se activan con `NODE_ENV=production` y HTTPS | Verificación en preproducción |
-| Mapa de Google (Contacto) | En la E2E se sustituye por una página local (no se prueba el servicio de Google) | Preproducción |
+| Mapa de Google (Contacto) y Google Fonts | En la E2E se sustituyen por respuestas locales (no se prueban los servicios de Google; se usan las fuentes de respaldo) | Preproducción |
 | DAST (OWASP ZAP) y pentest externo | No ejecutados | Pendiente P-11 de `SEGURIDAD-AUDITORIA.md` |
 | Respaldo y restauración de PostgreSQL en la infraestructura real | No disponible aquí (sí se probaron respaldo, restauración y migración de SQLite) | `DESPLIEGUE.md` §9 |
 | Carga representativa de producción | Ver supuestos en §4 | Repetir en preproducción |

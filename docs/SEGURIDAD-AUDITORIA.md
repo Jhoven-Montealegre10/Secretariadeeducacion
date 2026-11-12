@@ -200,5 +200,5 @@ La puerta de calidad de SonarQube Cloud falló con 23 hallazgos y 4,3 % de dupli
 | Promesas sin esperar en el editor de sliders (un error al redibujar quedaba sin aviso) | `await` en reordenar, activar y eliminar diapositivas |
 | `sort()` sin función de comparación | Comparación explícita: numérica, `localeCompare` o por unidades de código (huellas de migración estables) |
 | Expresiones regulares con retroceso superlineal | Recorte sin expresión regular y validación de correo en tiempo lineal |
-| Conexión SMTP sin TLS obligatorio | En producción `requireTLS` con TLS 1.2 como mínimo y validación de certificado |
+| Conexión SMTP sin TLS obligatorio | `requireTLS` siempre, con TLS 1.2 como mínimo y validación de certificado (el servidor SMTP debe admitir STARTTLS o `smtps://`) |
 | Duplicación (migraciones con el contenido inicial y lista del buscador) | Excluidos solo del análisis de duplicados en `.sonarcloud.properties`; se siguen analizando por seguridad y confiabilidad |

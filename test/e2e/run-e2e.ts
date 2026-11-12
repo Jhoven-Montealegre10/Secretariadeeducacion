@@ -107,6 +107,10 @@ async function go(page: Page, url: string): ReturnType<Page['goto']> {
  */
 async function aislar(ctx: BrowserContext): Promise<BrowserContext> {
   await ctx.route('https://www.google.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Mapa</title>' }));
+  // Google Fonts: hoja de estilos vacía (se usan las fuentes de respaldo del CSS). Una descarga fallida del tercero
+  // no debe hacer fallar la prueba; la apariencia con la fuente real se revisa en preproducción.
+  await ctx.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  await ctx.route('https://fonts.gstatic.com/**', (r) => r.fulfill({ status: 404, body: '' }));
   return ctx;
 }
 

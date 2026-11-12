@@ -32,16 +32,15 @@ export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const UBICACION_RE = /^(inicio|pagina:[a-z0-9]+(?:-[a-z0-9]+)*)$/;
 
 export function slugify(text: string): string {
-  return (
-    String(text)
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+/, '')
-      .replace(/-+$/, '')
-      .slice(0, 80) || 'contenido'
-  );
+  let slug = String(text)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  // Tras el reemplazo queda como mucho un guion en cada extremo: se recorta sin expresión regular (tiempo lineal).
+  if (slug.startsWith('-')) slug = slug.slice(1);
+  if (slug.endsWith('-')) slug = slug.slice(0, -1);
+  return slug.slice(0, 80) || 'contenido';
 }
 
 /** Enlaces permitidos en contenidos: rutas internas, anclas, http(s), mailto y tel. */
