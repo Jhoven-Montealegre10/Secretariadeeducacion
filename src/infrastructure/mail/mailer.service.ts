@@ -8,7 +8,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { Global, Inject, Injectable, Logger, Module } from '@nestjs/common';
-import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { APP_CONFIG, type AppConfig } from '../../config/configuration';
 
@@ -31,7 +30,7 @@ export class Mailer {
           url: config.mail.smtpUrl,
           requireTLS: true,
           tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
-        } as SMTPTransport.Options)
+        })
       : null;
   }
 

@@ -233,7 +233,7 @@ async function main(): Promise<void> {
     await p.click('.media-tile');
     await p.fill('.modal input[name=textoAlternativo]', 'Portada institucional');
     await p.click('.modal >> text=Guardar cambios');
-    await p.waitForSelector('.toast--ok');
+    await p.waitForSelector('.toast--ok:has-text("Archivo actualizado")'); // no el aviso anterior de la carga
     assert((await h.db.scalar<string>('SELECT texto_alternativo FROM medios ORDER BY id DESC LIMIT 1')) === 'Portada institucional', 'persistió');
     await shot(p, { path: path.join(OUT, '03-multimedia.png') });
   });
@@ -268,8 +268,11 @@ async function main(): Promise<void> {
     await go(p2, url);
     await p2.waitForSelector('input[name=titulo]');
     await p.fill('input[name=titulo]', 'Inscripciones escolares recientes (A)');
-    await p.click('button[type=submit]');
-    await p.waitForSelector('.toast--ok');
+    // El aviso de éxito tiene el mismo texto que el del paso anterior: se espera la respuesta del guardado.
+    await Promise.all([
+      p.waitForResponse((r) => r.request().method() === 'PUT' && r.url().includes('/api/v1/noticias/') && r.ok()),
+      p.click('button[type=submit]'),
+    ]);
     await p2.fill('input[name=titulo]', 'Inscripciones escolares recientes (B)');
     await p2.click('button[type=submit]');
     await p2.waitForSelector('.toast--error');
