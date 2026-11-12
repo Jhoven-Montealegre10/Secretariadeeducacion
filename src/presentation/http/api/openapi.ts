@@ -89,6 +89,7 @@ export const ERROR_DESCRIPTIONS: Readonly<Record<number, string>> = {
   413: 'El cuerpo o el archivo supera el tamaño permitido.',
   422: 'Error de validación de los datos.',
   429: 'Demasiadas solicitudes; intente más tarde.',
+  503: 'Servicio no disponible temporalmente (p. ej. el análisis antimalware de una carga); intente más tarde.',
 };
 
 export const API_INFO = {

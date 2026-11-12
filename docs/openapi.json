@@ -2941,6 +2941,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Servicio no disponible temporalmente (p. ej. el análisis antimalware de una carga); intente más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "summary": "Subir imágenes o audios",
@@ -3421,6 +3431,16 @@
           },
           "429": {
             "description": "Demasiadas solicitudes; intente más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Servicio no disponible temporalmente (p. ej. el análisis antimalware de una carga); intente más tarde.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5686,6 +5706,16 @@
           },
           "429": {
             "description": "Demasiadas solicitudes; intente más tarde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Servicio no disponible temporalmente (p. ej. el análisis antimalware de una carga); intente más tarde.",
             "content": {
               "application/json": {
                 "schema": {

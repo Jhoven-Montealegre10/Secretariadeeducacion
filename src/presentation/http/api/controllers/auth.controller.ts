@@ -81,9 +81,9 @@ export class AuthController {
   })
   async login(@Req() req: AppRequest) {
     const body = valid(req, 'body', S.LoginBody);
-    const { userId, siguientePaso } = await this.auth.verifyPassword(body.email, body.password, clientIp(req));
+    const { userId, authVersion, siguientePaso } = await this.auth.verifyPassword(body.email, body.password, clientIp(req));
     await regenerate(req);
-    req.session.pending = { userId, siguientePaso, expiresAt: Date.now() + this.config.session.pendingMfaMs, intentos: 0 };
+    req.session.pending = { userId, authVersion, siguientePaso, expiresAt: Date.now() + this.config.session.pendingMfaMs, intentos: 0 };
     const csrfToken = this.csrf.ensureToken(req);
     await save(req);
     return { data: { siguientePaso, csrfToken } };
@@ -151,7 +151,9 @@ export class AuthController {
     if (!pending || pending.siguientePaso !== 'configurar_mfa' || !setup || setup.expiresAt < Date.now()) {
       throw new UnauthorizedError('Genere de nuevo el código QR.', 'MFA_SETUP_EXPIRED');
     }
-    const { codigosRecuperacion } = await this.auth.confirmEnrollment(pending.userId, setup.secret, valid(req, 'body', S.MfaEnableBody).codigo, clientIp(req));
+    const { codigosRecuperacion } = await this.auth.confirmEnrollment(pending.userId, setup.secret, valid(req, 'body', S.MfaEnableBody).codigo, clientIp(req), {
+      authVersion: pending.authVersion,
+    });
     const { csrfToken } = await this.completeLogin(req, pending.userId);
     return { data: { codigosRecuperacion, csrfToken } };
   }
@@ -266,7 +268,10 @@ export class AuthController {
     const actor = req.actor as NonNullable<AppRequest['actor']>;
     const setup = req.session.mfaSetup;
     if (!setup || setup.expiresAt < Date.now()) throw new UnauthorizedError('Genere de nuevo el código QR.', 'MFA_SETUP_EXPIRED');
-    const { codigosRecuperacion } = await this.auth.confirmEnrollment(actor.id, setup.secret, valid(req, 'body', S.MfaEnableBody).codigo, clientIp(req));
+    const { codigosRecuperacion } = await this.auth.confirmEnrollment(actor.id, setup.secret, valid(req, 'body', S.MfaEnableBody).codigo, clientIp(req), {
+      replace: true,
+      authVersion: actor.authVersion,
+    });
     const { csrfToken } = await this.completeLogin(req, actor.id);
     return { data: { codigosRecuperacion, csrfToken } };
   }

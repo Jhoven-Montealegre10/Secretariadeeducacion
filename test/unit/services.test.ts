@@ -120,7 +120,7 @@ describe('UserService', () => {
       fakeDb,
       repo,
       fake<RoleRepository>({ findById: async (id: number) => roles.get(id) ?? null }),
-      fake<CredentialRepository>({ deleteSessionsOfUser: async () => 1 }),
+      fake<CredentialRepository>({ deleteSessionsOfUser: async () => 1, revokeResetTokens: async () => 0 }),
       fake<PasswordHasher>({ hash: async () => '$argon2id$fake' }),
       fake<AuthService>({ sendInvitation: async (u: UserRecord) => void invited.push(u.email) }),
       auditSvc,

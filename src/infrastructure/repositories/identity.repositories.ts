@@ -305,9 +305,14 @@ export class CredentialRepository {
 
   async createResetToken(userId: number, tokenHash: string, expiraEnMs: number): Promise<void> {
     await this.db.transaction(async () => {
-      await this.db.run('UPDATE tokens_recuperacion SET usado_en = now() WHERE usuario_id = $1 AND usado_en IS NULL', [userId]);
+      await this.revokeResetTokens(userId);
       await this.db.run('INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3)', [userId, tokenHash, fromMs(expiraEnMs)]);
     });
+  }
+
+  /** Invalida todos los enlaces de invitación o recuperación pendientes del usuario. */
+  async revokeResetTokens(userId: number): Promise<number> {
+    return this.db.run('UPDATE tokens_recuperacion SET usado_en = now() WHERE usuario_id = $1 AND usado_en IS NULL', [userId]);
   }
 
   async findResetToken(tokenHash: string): Promise<ResetTokenRecord | null> {

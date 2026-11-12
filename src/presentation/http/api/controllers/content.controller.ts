@@ -63,6 +63,7 @@ export class ContentController {
     description:
       'Se verifica el contenido real (no la extensión ni el MIME declarado). Las imágenes se re-codifican sin metadatos. Los archivos quedan privados hasta que se marquen públicos o los use un contenido publicado.',
     upload: { field: 'archivos', maxFiles: 10, maxBytes: mediaMax, form: S.MediaUploadForm },
+    errors: [503],
     response: { description: 'Archivos guardados', schema: S.MediaUploadResult },
   })
   async uploadMedia(@Req() req: AppRequest) {
@@ -115,7 +116,7 @@ export class ContentController {
     description: 'Si el archivo está en uso responde 409 con la lista de usos; reenvíe con `confirmar=true`. Debe ser del mismo tipo (imagen/audio).',
     upload: { field: 'archivo', maxFiles: 1, maxBytes: mediaMax, form: S.MediaReplaceForm },
     request: { params: IdParams },
-    errors: [409],
+    errors: [409, 503],
     response: { description: 'Reemplazado', schema: S.MediaOne },
   })
   async replaceMedia(@Req() req: AppRequest) {
@@ -398,6 +399,7 @@ export class ContentController {
     rateLimit: 'upload',
     summary: 'Publicar documento PDF',
     upload: { field: 'archivo', maxFiles: 1, maxBytes: (c) => c.uploads.maxDocumentBytes, form: S.DocumentForm },
+    errors: [503],
     response: { description: 'Publicado', schema: S.DocumentOne },
   })
   async createDocument(@Req() req: AppRequest) {

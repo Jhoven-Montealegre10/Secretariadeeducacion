@@ -81,7 +81,11 @@ export class AuthService {
   }
 
   /** Primer factor. Devuelve el usuario y el siguiente paso, o lanza un error genérico. */
-  async verifyPassword(email: string, password: string, ip: string | null): Promise<{ userId: number; siguientePaso: 'mfa' | 'configurar_mfa' }> {
+  async verifyPassword(
+    email: string,
+    password: string,
+    ip: string | null,
+  ): Promise<{ userId: number; authVersion: number; siguientePaso: 'mfa' | 'configurar_mfa' }> {
     const user = await this.users.findByEmail(
       String(email ?? '')
         .trim()
@@ -111,7 +115,7 @@ export class AuthService {
     if (this.hasher.needsRehash(user.passwordHash)) {
       await this.users.setPasswordHash(user.id, await this.hasher.hash(password), { rotateSessions: false });
     }
-    return { userId: user.id, siguientePaso: user.mfaActivo ? 'mfa' : 'configurar_mfa' };
+    return { userId: user.id, authVersion: user.authVersion, siguientePaso: user.mfaActivo ? 'mfa' : 'configurar_mfa' };
   }
 
   /** Segundo factor con código TOTP o código de recuperación. */
@@ -164,20 +168,39 @@ export class AuthService {
     return codes;
   }
 
-  /** Confirma el enrolamiento con un código válido; devuelve los códigos de recuperación (una sola vez). */
-  async confirmEnrollment(userId: number, secret: string | undefined, codigo: string, ip: string | null): Promise<{ codigosRecuperacion: string[] }> {
-    const user = await this.users.findById(userId);
-    if (!user || !secret) throw new UnauthorizedError('Inicie de nuevo la configuración del segundo factor.', 'MFA_SETUP_EXPIRED');
+  /**
+   * Confirma el enrolamiento con un código válido; devuelve los códigos de recuperación (una sola vez).
+   * - Primer ingreso (`replace` falso): solo si la cuenta aún no tiene segundo factor. Así, dos sesiones
+   *   de primer ingreso no pueden sobrescribir el MFA que la otra ya configuró.
+   * - Cambio de dispositivo (`replace` verdadero): solo si ya tiene MFA y la sesión es la vigente.
+   * En ambos casos se exige cuenta activa, sin bloqueo y con la misma versión de autenticación que tenía
+   * la sesión, y al terminar se cierran todas las demás sesiones de la persona.
+   */
+  async confirmEnrollment(
+    userId: number,
+    secret: string | undefined,
+    codigo: string,
+    ip: string | null,
+    { replace = false, authVersion }: { replace?: boolean; authVersion?: number } = {},
+  ): Promise<{ codigosRecuperacion: string[] }> {
+    const expired = () => new UnauthorizedError('Inicie sesión de nuevo para configurar el segundo factor.', 'MFA_SETUP_EXPIRED');
+    if (!secret) throw new UnauthorizedError('Inicie de nuevo la configuración del segundo factor.', 'MFA_SETUP_EXPIRED');
     const step = this.totp.verify(secret, codigo, this.clock.now());
     if (step === null)
       throw new ValidationError('El código no coincide. Verifique la hora de su teléfono e intente de nuevo.', [
         { campo: 'codigo', mensaje: 'Código incorrecto' },
       ]);
     const codes = await this.db.transaction(async () => {
+      const user = await this.users.findById(userId, { forUpdate: true }); // serializa enrolamientos simultáneos
+      if (!user) throw expired();
+      const versionDistinta = authVersion === undefined || user.authVersion !== authVersion;
+      const estadoMfaInvalido = replace ? !user.mfaActivo : user.mfaActivo;
+      if (!user.activo || this.isLocked(user) || versionDistinta || estadoMfaInvalido) throw expired();
       await this.users.setMfa(user.id, { secretoEnc: this.crypto.encrypt(secret), activo: true });
       await this.users.consumeTotpStep(user.id, step);
       const generated = await this.newRecoveryCodes(user.id);
       await this.users.recordLoginSuccess(user.id);
+      await this.credentials.deleteSessionsOfUser(user.id); // la sesión actual se regenera al completar el ingreso
       await this.audit.record({ actor: user, accion: 'mfa_configurar', recurso: 'usuario', recursoId: user.id, ip });
       return generated;
     });
@@ -222,6 +245,7 @@ export class AuthService {
     await this.db.transaction(async () => {
       await this.users.setPasswordHash(user.id, hash);
       await this.credentials.deleteSessionsOfUser(user.id);
+      await this.credentials.revokeResetTokens(user.id); // un enlace enviado antes ya no sirve
       await this.audit.record({ actor: user, accion: 'cambiar_password', recurso: 'usuario', recursoId: userId, ip });
     });
     return (await this.users.findById(user.id))?.authVersion ?? 0;
@@ -265,6 +289,7 @@ export class AuthService {
       if (!(await this.credentials.consumeResetToken(record.id))) throw invalid();
       await this.users.setPasswordHash(user.id, hash);
       await this.credentials.deleteSessionsOfUser(user.id);
+      await this.credentials.revokeResetTokens(user.id); // invalida los demás enlaces pendientes
       await this.audit.record({ actor: user, accion: 'restablecer_password', recurso: 'usuario', recursoId: user.id, ip });
     });
   }

@@ -80,6 +80,27 @@ export async function configureApp(app: NestExpressApplication): Promise<PgSessi
   );
 
   // Actor: se reconstruye desde la BD en cada petición; la sesión vence por inactividad y por tiempo absoluto.
+  // Primer ingreso pendiente: se descarta si venció o si la cuenta cambió entretanto (contraseña, MFA, rol, desactivación).
+  app.use((req: AppRequest, res: Response, next: NextFunction) => {
+    const pending = req.session?.pending;
+    if (!pending) return next();
+    const discard = () => {
+      delete req.session.pending;
+      delete req.session.mfaSetup;
+    };
+    if (pending.expiresAt <= Date.now()) {
+      discard();
+      return next();
+    }
+    auth
+      .currentAuthVersion(pending.userId)
+      .then((current) => {
+        if (current === undefined || current !== pending.authVersion) discard();
+        next();
+      })
+      .catch(next);
+  });
+
   app.use((req: AppRequest, res: Response, next: NextFunction) => {
     req.actor = null;
     const a = req.session?.auth;

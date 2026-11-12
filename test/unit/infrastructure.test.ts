@@ -1,6 +1,7 @@
 /** Utilidades de infraestructura sin base de datos: SQL seguro, criptografía, caché, estadísticas y errores. */
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import { describe, test } from 'node:test';
 import { AuditService } from '../../src/application/audit.service';
 import { device, source } from '../../src/application/stats.service';
@@ -9,6 +10,7 @@ import type { AppConfig } from '../../src/config/configuration';
 import { PublicCache } from '../../src/infrastructure/cache/public-cache.service';
 import type { Db } from '../../src/infrastructure/database/db.service';
 import { clampPage, likePattern, orderBy, toMs, Where } from '../../src/infrastructure/database/sql';
+import { createMalwareScan, MalwareScanner } from '../../src/infrastructure/storage/malware-scanner.service';
 import { CryptoService } from '../../src/infrastructure/security/crypto.service';
 import { FileStorage } from '../../src/infrastructure/storage/file-storage';
 import { normalizeError } from '../../src/presentation/http/errors/error.filter';
@@ -192,5 +194,52 @@ describe('Normalización de errores', () => {
     assert.equal(normalizeError({ type: 'entity.parse.failed' }).status, 400);
     const app = new AppError('x', { status: 418, code: 'TEAPOT' });
     assert.equal(normalizeError(app), app);
+  });
+});
+
+describe('Escáner antimalware (S-5)', () => {
+  type Cb = (err: Error | null) => void;
+  const fake = (result: (file: string) => Error | null, files: string[]) => (_cmd: string, args: string[], _opts: { timeout: number }, cb: Cb) => {
+    files.push(args[1]);
+    assert.ok(fs.existsSync(args[1]), 'el archivo temporal existe mientras se analiza');
+    cb(result(args[1]));
+  };
+  const withCode = (code: unknown) => Object.assign(new Error('salida'), { code });
+
+  test('obligatorio sin comando → 503 MALWARE_SCAN_UNAVAILABLE; opcional sin comando → sin análisis', async () => {
+    await assert.rejects(createMalwareScan({ command: '', required: true, quiet: true })(Buffer.from('x')), { status: 503, code: 'MALWARE_SCAN_UNAVAILABLE' });
+    assert.deepEqual(await createMalwareScan({ command: '', required: false, quiet: true })(Buffer.from('x')), { escaneado: false, limpio: true });
+  });
+
+  test('limpio, infectado, error del escáner y tiempo agotado; el temporal siempre se elimina', async () => {
+    const files: string[] = [];
+    const scan = (r: (f: string) => Error | null) =>
+      createMalwareScan({ command: '/usr/bin/clamdscan', required: true, execute: fake(r, files) })(Buffer.from('datos'));
+    assert.deepEqual(await scan(() => null), { escaneado: true, limpio: true });
+    assert.deepEqual(await scan(() => withCode(1)), { escaneado: true, limpio: false });
+    await assert.rejects(
+      scan(() => withCode(2)),
+      { status: 503 },
+      'error del escáner',
+    );
+    await assert.rejects(
+      scan(() => Object.assign(new Error('timeout'), { killed: true, signal: 'SIGTERM', code: null })),
+      { status: 503 },
+      'tiempo agotado',
+    );
+    await assert.rejects(
+      scan(() => withCode('ENOENT')),
+      { status: 503 },
+      'comando inexistente',
+    );
+    assert.equal(files.length, 5);
+    for (const f of files) assert.equal(fs.existsSync(f), false, `temporal eliminado: ${f}`);
+  });
+
+  test('el escáner de la aplicación es obligatorio automáticamente en producción', async () => {
+    const prod = new MalwareScanner({ isProd: true, isTest: false, uploads: { malwareScanCommand: '' } } as unknown as AppConfig);
+    await assert.rejects(prod.scan(Buffer.from('x')), { status: 503, code: 'MALWARE_SCAN_UNAVAILABLE' });
+    const dev = new MalwareScanner({ isProd: false, isTest: true, uploads: { malwareScanCommand: '' } } as unknown as AppConfig);
+    assert.deepEqual(await dev.scan(Buffer.from('x')), { escaneado: false, limpio: true });
   });
 });

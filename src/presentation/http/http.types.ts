@@ -7,7 +7,7 @@ declare module 'express-session' {
     /** Sesión completa: contraseña + segundo factor verificados. */
     auth?: { userId: number; authVersion: number; loginAt: number };
     /** Primer factor verificado, segundo pendiente. */
-    pending?: { userId: number; siguientePaso: 'mfa' | 'configurar_mfa'; expiresAt: number; intentos: number };
+    pending?: { userId: number; authVersion: number; siguientePaso: 'mfa' | 'configurar_mfa'; expiresAt: number; intentos: number };
     /** Secreto TOTP en configuración (solo en el servidor, nunca en el navegador). */
     mfaSetup?: { secret: string; expiresAt: number };
     csrf?: string;

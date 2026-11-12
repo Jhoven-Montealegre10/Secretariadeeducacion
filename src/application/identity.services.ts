@@ -67,6 +67,22 @@ export class UserService {
     return role;
   }
 
+  /**
+   * Solo se gestiona a otra persona si su rol es uno que el actor podría asignar (no tiene permisos
+   * que el actor no tenga) y, si es administradora, solo otro administrador puede hacerlo.
+   * La propia cuenta tiene reglas aparte (no puede cambiar su rol ni desactivarse).
+   */
+  private async requireManageableUser(actor: Actor, user: UserRecord): Promise<void> {
+    if (user.id === actor.id) return;
+    if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR) {
+      throw new ForbiddenError('Solo un administrador puede gestionar a otro administrador.');
+    }
+    const role = await this.roles.findById(user.rolId);
+    if (!role || role.permisos.some((p) => !actor.permisos.has(p))) {
+      throw new ForbiddenError('No puede gestionar a un usuario con permisos que usted no tiene.');
+    }
+  }
+
   private async ensureAnotherAdmin(user: UserRecord, actionText: string): Promise<void> {
     if (user.rolSlug === ROL_ADMINISTRADOR && user.activo && (await this.users.countActiveAdmins(user.id)) === 0) {
       throw new ConflictError(`No se puede ${actionText} al último administrador activo.`);
@@ -112,6 +128,7 @@ export class UserService {
       return await this.db.transaction(async () => {
         await this.db.advisoryXactLock(LOCKS.USER_ADMIN); // un cambio de cuentas a la vez: sin interbloqueos entre administradores
         const user = await this.requireUser(id, true);
+        await this.requireManageableUser(actor, user);
         if (!versionCoincide(changes.version, user.version)) throw new EditConflictError(user.version);
         const self = user.id === actor.id;
         const roleChanged = changes.rolId !== undefined && changes.rolId !== user.rolId;
@@ -137,6 +154,7 @@ export class UserService {
         if (roleChanged || deactivated || (email && email !== user.email)) {
           await this.users.bumpAuthVersion(id); // revoca sesiones activas
           await this.credentials.deleteSessionsOfUser(id);
+          await this.credentials.revokeResetTokens(id); // y los enlaces de invitación o recuperación enviados antes
         }
         await this.audit.record({
           actor,
@@ -166,6 +184,7 @@ export class UserService {
       await this.db.advisoryXactLock(LOCKS.USER_ADMIN);
       const user = await this.requireUser(id, true);
       if (user.id === actor.id) throw new ForbiddenError('No puede eliminar su propia cuenta.');
+      await this.requireManageableUser(actor, user);
       if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR)
         throw new ForbiddenError('Solo un administrador puede eliminar a otro administrador.');
       await this.ensureAnotherAdmin(user, 'eliminar');
@@ -182,11 +201,11 @@ export class UserService {
       await this.db.advisoryXactLock(LOCKS.USER_ADMIN);
       const user = await this.requireUser(id, true);
       if (user.id === actor.id) throw new ForbiddenError('Use "Mi cuenta" para cambiar su propio segundo factor.');
-      if (user.rolSlug === ROL_ADMINISTRADOR && actor.rolSlug !== ROL_ADMINISTRADOR)
-        throw new ForbiddenError('Solo un administrador puede modificar a otro administrador.');
+      await this.requireManageableUser(actor, user);
       await this.users.setMfa(id, { secretoEnc: null, activo: false });
       await this.credentials.replaceRecoveryCodes(id, []);
       await this.credentials.deleteSessionsOfUser(id);
+      await this.credentials.revokeResetTokens(id);
       await this.audit.record({ actor, accion: 'usuario_restablecer_mfa', recurso: 'usuario', recursoId: id, ip });
     });
   }
@@ -194,6 +213,7 @@ export class UserService {
   async resendInvitation(actor: Actor | null, id: number, ip: string | null): Promise<void> {
     authorize(actor, 'users.update');
     const user = await this.requireUser(id);
+    if (user.id !== actor.id) await this.requireManageableUser(actor, user);
     await this.auth.sendInvitation(user);
     await this.audit.record({ actor, accion: 'usuario_enviar_invitacion', recurso: 'usuario', recursoId: id, ip });
   }
