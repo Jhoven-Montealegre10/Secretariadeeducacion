@@ -19,7 +19,7 @@ export function richText(label, html = '', { required = false, help = '' } = {})
   const id = nextId('editor');
   const area = h('div', { class: 'rte__area', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-labelledby': `${id}-label`, id });
   // Contenido previamente sanitizado por el servidor; la CSP impide ejecutar scripts.
-  area.innerHTML = html || '<p></p>';
+  area.innerHTML = html || '<p><br></p>';
   const bar = h(
     'div',
     { class: 'rte__bar', role: 'toolbar', 'aria-label': `Formato de ${label}` },

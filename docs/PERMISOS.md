@@ -18,6 +18,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | Gestionar imágenes y contenido de sliders | Sí | Sí | `sliders.create/update` (agregar, reemplazar, ordenar, activar/desactivar) |
 | Eliminar definitivamente contenidos o archivos | Sí | No | `*.delete` |
 | Consultar la auditoría | Sí | No | `audit.read` |
+| Consultar métricas de operación del servidor | Sí | No | `system.read` |
 | Ver datos personales de PQRSD y responder | Sí | No | `pqrsd.read`, `pqrsd.respond` |
 
 ## Detalle por módulo y acción
@@ -35,6 +36,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | Roles y permisos | Eliminar | `roles.delete` | Sí | No |
 | Estadísticas | Consultar | `stats.read` | Sí | No |
 | Auditoría | Consultar | `audit.read` | Sí | No |
+| Sistema | Consultar métricas de operación | `system.read` | Sí | No |
 | Multimedia | Consultar | `media.read` | Sí | Sí |
 | Multimedia | Subir | `media.upload` | Sí | Sí |
 | Multimedia | Actualizar y reemplazar | `media.update` | Sí | Sí |
@@ -59,7 +61,7 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 | PQRSD | Consultar datos personales | `pqrsd.read` | Sí | No |
 | PQRSD | Responder | `pqrsd.respond` | Sí | No |
 
-## Reglas adicionales (verificadas con pruebas en `tests/authorization.test.js`)
+## Reglas adicionales (verificadas con pruebas en `test/integration/authorization.test.ts` y `test/integration/qa-regresion.test.ts`)
 
 - El rol **Administrador** es del sistema: no se elimina y sus permisos no se modifican.
 - El administrador puede crear **roles adicionales** con permisos explícitos por módulo y acción.
@@ -71,3 +73,10 @@ sobre cada recurso (`authorize(actor, permiso)`). Ocultar opciones en el panel e
 - Solo un administrador puede modificar a otro administrador, incluyendo su correo, MFA e invitaciones.
 - Un gestor de usuarios solo puede modificar, eliminar, restablecer MFA o reenviar invitaciones de otras cuentas cuyos permisos estén contenidos en los suyos.
 - Cambiar correo, rol, desactivar una cuenta o restablecer su MFA invalida también los enlaces de recuperación anteriores.
+
+
+## Aplicación técnica (versión 4)
+
+- Guard global de NestJS (`SecurityGuard`): **toda ruta sin declaración se rechaza**; luego límite, acceso o permiso y CSRF.
+- Los servicios vuelven a comprobar el permiso (`authorize`) y las reglas sobre el recurso concreto, por lo que llamar a la API directamente, saltando la interfaz, no evita ninguna regla (probado en `test/integration/authorization.test.ts` y en E2E).
+- El permiso `system.read` es nuevo; la migración `DatosIniciales` lo asigna al rol Administrador. Al migrar desde la versión 3, la herramienta agrega al rol Administrador los permisos nuevos (hoy `system.read`), porque ese rol no se puede editar desde el panel; el informe de migración lo registra en `permisosAgregadosAlAdministrador`.

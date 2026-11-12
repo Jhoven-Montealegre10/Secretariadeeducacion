@@ -124,7 +124,7 @@ function editor(main, ctx, catalog, role) {
     busy(save, async () => {
       const permisos = [...form.querySelectorAll('input[name=permisos]:checked')].map((c) => c.value);
       try {
-        if (role) await patch(`/roles/${role.id}`, { nombre: nombre.value, descripcion: descripcion.value, ...(locked ? {} : { permisos }) });
+        if (role) await patch(`/roles/${role.id}`, { nombre: nombre.value, descripcion: descripcion.value, version: role.version, ...(locked ? {} : { permisos }) });
         else await post('/roles', { nombre: nombre.value, descripcion: descripcion.value, permisos });
         toast('Rol guardado. Los usuarios del rol deberán ingresar de nuevo para aplicar los cambios.');
         ctx.navigate('/admin/roles');

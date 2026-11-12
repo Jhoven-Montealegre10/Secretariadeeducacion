@@ -109,7 +109,7 @@ Gravedad: Crítica / Alta / Media / Baja / Informativa. Estado de la nueva verif
 
 | ID | Gravedad | Pendiente | Acción recomendada / cómo verificar |
 |---|---|---|---|
-| P-01 | Baja | Límites de peticiones en memoria (se reinician y no se comparten entre procesos) | Con más de una instancia, usar almacén compartido (Redis). Verificar con pruebas de carga contra preproducción |
+| P-01 | Baja | **Parcialmente resuelto en v4:** los límites sensibles (login, MFA, recuperación, cargas, PQRSD) se comparten en PostgreSQL; los generales siguen por instancia | Con muchas instancias, dividir los límites generales entre instancias o limitar también en el proxy |
 | P-02 | Media | Antimalware **no configurado por defecto** | Instalar ClamAV y definir `MALWARE_SCAN_COMMAND=/usr/bin/clamdscan`. Verificar subiendo el archivo de prueba EICAR en preproducción (debe responder 422) |
 | P-03 | Media (operación) | Sin SMTP no se envían invitaciones ni recuperaciones en producción | Configurar `SMTP_URL` con el servidor institucional y SPF/DKIM. Verificar solicitando una recuperación |
 | P-04 | Info | País solo con cabecera del proxy | Configurar `STATS_GEO_HEADER` si el proxy/CDN la provee |
@@ -117,7 +117,7 @@ Gravedad: Crítica / Alta / Media / Baja / Informativa. Estado de la nueva verif
 | P-06 | Baja | Swagger UI requiere `style-src 'unsafe-inline'` en sus dos rutas | Aceptado: solo estilos, nunca scripts; la documentación completa exige sesión |
 | P-07 | Media (futuro) | Credenciales para integraciones externas no implementadas | Diseño: tabla `clientes_api` con clave aleatoria (hash HMAC), rol técnico de mínimo privilegio, expiración, rotación, auditoría y límites propios; autenticación `Authorization: Bearer` sin cookies |
 | P-08 | Info | Solo TOTP (sin WebAuthn/llaves de seguridad) | Evaluar WebAuthn para administradores |
-| P-09 | Media (operación) | Copias de seguridad y restauración no probadas sobre la infraestructura real | Seguir `DESPLIEGUE.md` §7 y registrar una prueba de restauración trimestral |
+| P-09 | Media (operación) | Copias de seguridad y restauración de PostgreSQL no probadas sobre la infraestructura real (sí el respaldo/restauración de SQLite y la migración, en las pruebas) | Seguir `DESPLIEGUE.md` §9 y registrar una prueba de restauración trimestral |
 | P-10 | Baja | Sin herramienta de rotación de `DATA_ENCRYPTION_KEY` | El formato cifrado está versionado (`v1:`); una rotación requiere un script de re-cifrado |
 | P-11 | Media | No se ejecutó un pentest externo ni un escáner DAST (p. ej. OWASP ZAP) | Ejecutar ZAP en modo autenticado contra **preproducción** antes de publicar y repetir en cada versión mayor |
 | P-12 | Info | El editor de texto usa `document.execCommand` (obsoleto pero soportado) | Reemplazar por un editor mantenido cuando se requiera más formato; la seguridad no depende del editor (sanitización en servidor) |
@@ -125,7 +125,40 @@ Gravedad: Crítica / Alta / Media / Baja / Informativa. Estado de la nueva verif
 | P-14 | Baja | Sin alertas automáticas (p. ej. ráfagas de `login` fallidos) | Integrar los registros con el monitoreo de la Alcaldía |
 | P-15 | Info | Contenido oficial pendiente (misión/visión, directorio, enlaces SAC/Humano) | Cargar desde el panel |
 
-## 7. Correcciones de la revisión posterior (2026-11-10)
+## 7. Auditoría de la versión 4 (TypeScript + NestJS + PostgreSQL)
+
+### 7.1 Controles verificados con pruebas automatizadas
+
+| Control | Evidencia |
+|---|---|
+| Cuenta de aplicación sin superusuario, sin DDL, sin crear objetos en `public` | `platform.test.ts` → "PostgreSQL: mínimo privilegio" |
+| Credenciales de migración separadas de las de ejecución | `data-source.ts` (`forMigrations`), arnés de pruebas (migra como `semibague_migrator`, ejecuta como `semibague_app`) |
+| Bitácora: la app no puede UPDATE/DELETE/TRUNCATE; triggers; manipulación del DBA detectada por la cadena HMAC | `platform.test.ts` → "Auditoría" |
+| Cadena de auditoría consistente con escrituras concurrentes (bloqueo consultivo) | `platform.test.ts` |
+| TLS obligatorio con validación de certificado para PostgreSQL remoto (el arranque falla sin `verify-full`) | `auth.test.ts` → configuración de producción |
+| Consultas parametrizadas; orden/agrupación por lista blanca; comodines de búsqueda escapados | `infrastructure.test.ts` (Where/orderBy/likePattern), `platform.test.ts` (inyección SQL), `media.test.ts` |
+| Registros sin parámetros SQL, contraseñas, códigos ni tokens | `platform.test.ts` → "los registros…" |
+| Sesiones en PostgreSQL con la clave como HMAC del ID; revocación por usuario | `auth.test.ts` |
+| Denegación por defecto (rutas sin declaración rechazadas), permisos también al llamar la API directamente | `authorization.test.ts`, E2E "Permisos" |
+| Límites sensibles compartidos y sin IP en claro | `rate-limit.test.ts` |
+| Bloqueo optimista y unicidad con concurrencia real (slugs, último administrador, ediciones) | `content.test.ts`, `authorization.test.ts`, prueba de carga |
+| Respuestas privadas `no-store`; caché solo de contenido publicado e invalidada al publicar/despublicar | `platform.test.ts`, `content.test.ts`, `infrastructure.test.ts` |
+| Errores de BD (timeout, bloqueo, interbloqueo, pool agotado) → 503 sin detalles | `infrastructure.test.ts` |
+| Dependencias sin vulnerabilidades conocidas | `npm audit`: 0 |
+
+### 7.2 Hallazgos de esta fase y corrección
+
+| ID | Severidad | Hallazgo | Corrección | Verificación |
+|---|---|---|---|---|
+| F4-01 | Alta | El registro de errores por defecto de TypeORM escribía las consultas fallidas **con sus parámetros** (podían incluir hashes, datos cifrados o tokens) | `SafeQueryLogger`: solo código de error y tipo de sentencia, nunca parámetros | Prueba de registros sin `PARAMETERS:` |
+| F4-02 | Media | Tras migrar desde v3, el rol Administrador (inmutable desde el panel) no podía recibir el permiso nuevo `system.read` | La herramienta de migración agrega los permisos nuevos del rol del sistema y lo informa | `migration.test.ts` |
+| F4-03 | Media | Los ID de sesión se guardaban en claro (v3): una lectura de la tabla permitía secuestrar sesiones | Clave = HMAC del ID | `auth.test.ts` |
+| F4-04 | Media | Límites de intentos por proceso: con varias instancias se multiplicaban | Límites sensibles en PostgreSQL | `rate-limit.test.ts` |
+| F4-05 | Baja | La exportación de archivos en simulacro podía dejar copias sin referencia | Documentado en el runbook (las copias son idénticas e inofensivas) | — |
+
+Hallazgos de la revisión de QA independiente: ver `docs/QA-INFORME.md` §5.
+
+## 8. Correcciones de la revisión posterior en `main` (versión 3, 2026-11-10) y su traslado a la versión 4
 
 Los cuatro fallos de lógica se reprodujeron primero con datos ficticios, base de datos en memoria y archivos
 temporales. Después se añadieron pruebas de regresión que exigen su rechazo, junto con flujos legítimos.
@@ -146,3 +179,26 @@ contra una conexión rechazada temprano producía `ECONNRESET` en el cliente de 
 La integración con ClamAV real y sus firmas se debe configurar y probar en preproducción; las pruebas locales
 simulan los resultados del ejecutable y comprueban la política real de producción sin un comando configurado.
 No se ha ejecutado un pentest contra infraestructura desplegada ni un escaneo DAST en esta revisión.
+
+**Traslado a la versión 4 (TypeScript + NestJS + PostgreSQL).** Las cinco correcciones se implementaron también en
+la versión 4: `UserService.requireManageableUser`, `AuthService.confirmEnrollment` (transacción con bloqueo de fila,
+versión de autenticación y modo alta/reemplazo), descarte del primer ingreso pendiente en `app.setup.ts`,
+`CredentialRepository.revokeResetTokens` y `createMalwareScan` (obligatorio en producción, 503). La regla de la
+imagen de noticias futuras ya existía en v4 (QA-13). Regresiones contra PostgreSQL real en
+`test/integration/seguridad-regresiones.test.ts` y del escáner en `test/unit/infrastructure.test.ts`.
+
+## 9. Análisis estático de SonarQube Cloud (PR #4)
+
+La puerta de calidad de SonarQube Cloud falló con 23 hallazgos y 4,3 % de duplicación en código nuevo. Se corrigieron así:
+
+| Hallazgo | Corrección |
+|---|---|
+| Contraseñas de PostgreSQL escritas en `.github/workflows/ci.yml` (bloqueante) | El servidor de pruebas efímero usa autenticación `trust` (solo escucha en el runner) y las contraseñas de los roles se generan al azar en cada ejecución |
+| `npm ci` y `npx` podían ejecutar scripts de instalación o descargar paquetes al vuelo | `npm ci --ignore-scripts` (argon2 y sharp usan binarios precompilados); Playwright, TypeScript y TypeORM se ejecutan desde la versión exacta del lockfile |
+| Contraseñas fijas de los roles en el arnés de pruebas | Aleatorias por proceso (o `TEST_DB_APP_PASSWORD` / `TEST_DB_MIGRATOR_PASSWORD`) |
+| `psql` se buscaba en el `PATH` | Ruta absoluta en `PSQL_PATH` o en directorios fijos de instalación |
+| Promesas sin esperar en el editor de sliders (un error al redibujar quedaba sin aviso) | `await` en reordenar, activar y eliminar diapositivas |
+| `sort()` sin función de comparación | Comparación explícita: numérica, `localeCompare` o por unidades de código (huellas de migración estables) |
+| Expresiones regulares con retroceso superlineal | Recorte sin expresión regular y validación de correo en tiempo lineal |
+| Conexión SMTP sin TLS obligatorio | `requireTLS` siempre, con TLS 1.2 como mínimo y validación de certificado (el servidor SMTP debe admitir STARTTLS o `smtps://`) |
+| Duplicación (migraciones con el contenido inicial y lista del buscador) | Excluidos solo del análisis de duplicados en `.sonarcloud.properties`; se siguen analizando por seguridad y confiabilidad |

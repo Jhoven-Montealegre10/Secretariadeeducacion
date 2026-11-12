@@ -138,7 +138,7 @@ function editorFor(ctx, block) {
     case 'seccion': {
       const t = txt('Título', 'titulo', { maxlength: 160 });
       const a = txt('Antetítulo', 'antetitulo', { maxlength: 80 });
-      const an = txt('Ancla (para enlaces #)', 'ancla', { maxlength: 60, pattern: '[a-z0-9-]*' }, { help: 'Ej.: dependencias → enlace /pagina#dependencias' });
+      const an = txt('Ancla (para enlaces #)', 'ancla', { maxlength: 60, pattern: '[a-z0-9\\-]*' }, { help: 'Ej.: dependencias → enlace /pagina#dependencias' });
       const f = select(
         [
           ['blanco', 'Blanco'],

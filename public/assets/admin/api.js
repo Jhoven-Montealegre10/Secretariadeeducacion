@@ -9,7 +9,8 @@ export class ApiError extends Error {
     super(body?.error?.message || 'Error de comunicación con el servidor.');
     this.status = status;
     this.code = body?.error?.code;
-    this.details = body?.error?.details || [];
+    this.details = Array.isArray(body?.error?.details) ? body.error.details : [];
+    this.data = Array.isArray(body?.error?.details) ? null : body?.error?.details || null;
     this.requestId = body?.error?.requestId;
   }
 }

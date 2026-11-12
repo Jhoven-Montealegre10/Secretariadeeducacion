@@ -1,0 +1,111 @@
+# Integración continua: calidad estática, pruebas unitarias y de integración contra PostgreSQL real,
+# contrato OpenAPI, auditoría de dependencias y pruebas E2E en Chromium, Firefox y WebKit.
+# Credenciales: no hay ninguna en este archivo. El servidor PostgreSQL de PRUEBAS es un contenedor efímero que solo
+# escucha en el runner (autenticación trust); las contraseñas de los roles se generan al azar en cada ejecución.
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_PG_ADMIN_URL: postgres://postgres@127.0.0.1:5432/postgres
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_NAME: semibague_ci
+      DB_USER: semibague_app
+      DB_MIGRATION_USER: semibague_migrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cliente de PostgreSQL (psql)
+        # La imagen ubuntu-24.04 ya incluye psql; solo se instala si falta (evita depender de los espejos de apt).
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
+      - name: Contraseñas aleatorias de los roles de la base de CI
+        run: |
+          echo "DB_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+          echo "DB_MIGRATION_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+      # Sin scripts de instalación: argon2 y sharp usan binarios precompilados del paquete.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - name: Base de CI con roles de mínimo privilegio y migraciones
+        run: |
+          psql "$TEST_PG_ADMIN_URL" -q -v app_password="$DB_PASSWORD" -v migrator_password="$DB_MIGRATION_PASSWORD" \
+            -v db_name=semibague_ci -f scripts/postgres/01-crear-roles-y-base.sql
+          node node_modules/typeorm/cli.js migration:run -d dist/src/infrastructure/database/migration-cli.js
+      - name: Sin desviación entre entidades y esquema
+        run: node node_modules/typeorm/cli.js migration:generate -d dist/src/infrastructure/database/migration-cli.js /tmp/semibague-drift --dr --ch
+      - name: Contrato OpenAPI sincronizado
+        run: npm run openapi:check
+      - run: npm audit --omit=dev
+
+  e2e:
+    needs: verificar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_PG_ADMIN_URL: postgres://postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cliente de PostgreSQL (psql)
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
+      - run: npm ci --ignore-scripts
+      # Playwright de la versión exacta del lockfile (sin descargas de paquetes al vuelo).
+      - run: node node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+      - run: npm run build && node node_modules/typescript/bin/tsc -p tsconfig.json
+      - run: npm run test:e2e
+        env:
+          E2E_BROWSER: ${{ matrix.browser }}
+          E2E_OUT: test-results/e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.browser }}
+          path: test-results/e2e/
+          retention-days: 14

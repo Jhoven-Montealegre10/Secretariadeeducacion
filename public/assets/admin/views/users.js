@@ -55,7 +55,7 @@ export async function render(main, ctx) {
     save.addEventListener('click', () =>
       busy(save, async () => {
         const body = u
-          ? { nombre: nombre.value, email: email.value, ...(self ? {} : { rolId: Number(rol.value), activo: activo.querySelector('input').checked }) }
+          ? { nombre: nombre.value, email: email.value, version: u.version, ...(self ? {} : { rolId: Number(rol.value), activo: activo.querySelector('input').checked }) }
           : { nombre: nombre.value, email: email.value, rolId: Number(rol.value) };
         try {
           u ? await patch(`/usuarios/${u.id}`, body) : await post('/usuarios', body);

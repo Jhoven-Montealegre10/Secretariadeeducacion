@@ -14,31 +14,44 @@
   }
 
   // ---------- Submenús (clic / teclado) ----------
+  // Un submenú solo está abierto si su botón dice aria-expanded="true" (estado y vista siempre coinciden).
+  function closeSub(li, returnFocus) {
+    if (!li.classList.contains('open')) return;
+    li.classList.remove('open');
+    var b = li.querySelector('.nav-btn');
+    b.setAttribute('aria-expanded', 'false');
+    if (returnFocus) b.focus();
+  }
+  function closeAll(except) {
+    document.querySelectorAll('.has-sub.open').forEach(function (o) {
+      if (o !== except) closeSub(o, false);
+    });
+  }
   document.querySelectorAll('.has-sub > .nav-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var li = btn.parentElement;
       var isOpen = li.classList.contains('open');
-      document.querySelectorAll('.has-sub.open').forEach(function (o) {
-        o.classList.remove('open');
-        o.querySelector('.nav-btn').setAttribute('aria-expanded', 'false');
-      });
-      if (!isOpen) {
+      closeAll(li);
+      if (isOpen) closeSub(li, false);
+      else {
         li.classList.add('open');
         btn.setAttribute('aria-expanded', 'true');
       }
     });
   });
+  document.querySelectorAll('.has-sub').forEach(function (li) {
+    // Al salir del submenú con el teclado (Tab) se cierra.
+    li.addEventListener('focusout', function (e) {
+      if (!li.contains(e.relatedTarget)) closeSub(li, false);
+    });
+  });
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.has-sub')) {
-      document.querySelectorAll('.has-sub.open').forEach(function (o) {
-        o.classList.remove('open');
-      });
-    }
+    if (!e.target.closest('.has-sub')) closeAll(null);
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       document.querySelectorAll('.has-sub.open').forEach(function (o) {
-        o.classList.remove('open');
+        closeSub(o, o.contains(document.activeElement)); // el foco vuelve al botón que abrió el submenú
       });
     }
   });
@@ -49,14 +62,14 @@
   function store(k, v) {
     try {
       localStorage.setItem(k, v);
-    } catch (e) {
+    } catch {
       /* almacenamiento no disponible */
     }
   }
   function read(k) {
     try {
       return localStorage.getItem(k);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
