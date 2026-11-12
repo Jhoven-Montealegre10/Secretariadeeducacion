@@ -101,7 +101,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 
   const port = num('PORT', 3000);
-  const appUrl = (env.APP_URL || `http://localhost:${port}`).replace(/\/+$/, '');
+  let appUrl = env.APP_URL || `http://localhost:${port}`;
+  while (appUrl.endsWith('/')) appUrl = appUrl.slice(0, -1); // sin expresión regular: tiempo lineal
   if (isProd && !appUrl.startsWith('https://')) errors.push('APP_URL debe usar https:// en producción.');
 
   const storageDir = env.STORAGE_DIR || path.join(root, 'storage');

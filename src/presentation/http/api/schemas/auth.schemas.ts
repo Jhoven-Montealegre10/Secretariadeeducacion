@@ -78,6 +78,6 @@ export function toSessionUser(actor: Actor) {
     email: actor.email,
     nombre: actor.nombre,
     rol: { id: actor.rolId, slug: actor.rolSlug, nombre: actor.rolNombre },
-    permisos: [...actor.permisos].sort(),
+    permisos: [...actor.permisos].sort((a, b) => a.localeCompare(b)),
   };
 }

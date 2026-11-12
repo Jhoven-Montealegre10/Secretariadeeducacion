@@ -186,3 +186,19 @@ versión de autenticación y modo alta/reemplazo), descarte del primer ingreso p
 `CredentialRepository.revokeResetTokens` y `createMalwareScan` (obligatorio en producción, 503). La regla de la
 imagen de noticias futuras ya existía en v4 (QA-13). Regresiones contra PostgreSQL real en
 `test/integration/seguridad-regresiones.test.ts` y del escáner en `test/unit/infrastructure.test.ts`.
+
+## 9. Análisis estático de SonarQube Cloud (PR #4)
+
+La puerta de calidad de SonarQube Cloud falló con 23 hallazgos y 4,3 % de duplicación en código nuevo. Se corrigieron así:
+
+| Hallazgo | Corrección |
+|---|---|
+| Contraseñas de PostgreSQL escritas en `.github/workflows/ci.yml` (bloqueante) | El servidor de pruebas efímero usa autenticación `trust` (solo escucha en el runner) y las contraseñas de los roles se generan al azar en cada ejecución |
+| `npm ci` y `npx` podían ejecutar scripts de instalación o descargar paquetes al vuelo | `npm ci --ignore-scripts` (argon2 y sharp usan binarios precompilados); Playwright, TypeScript y TypeORM se ejecutan desde la versión exacta del lockfile |
+| Contraseñas fijas de los roles en el arnés de pruebas | Aleatorias por proceso (o `TEST_DB_APP_PASSWORD` / `TEST_DB_MIGRATOR_PASSWORD`) |
+| `psql` se buscaba en el `PATH` | Ruta absoluta en `PSQL_PATH` o en directorios fijos de instalación |
+| Promesas sin esperar en el editor de sliders (un error al redibujar quedaba sin aviso) | `await` en reordenar, activar y eliminar diapositivas |
+| `sort()` sin función de comparación | Comparación explícita: numérica, `localeCompare` o por unidades de código (huellas de migración estables) |
+| Expresiones regulares con retroceso superlineal | Recorte sin expresión regular y validación de correo en tiempo lineal |
+| Conexión SMTP sin TLS obligatorio | En producción `requireTLS` con TLS 1.2 como mínimo y validación de certificado |
+| Duplicación (migraciones con el contenido inicial y lista del buscador) | Excluidos solo del análisis de duplicados en `.sonarcloud.properties`; se siguen analizando por seguridad y confiabilidad |

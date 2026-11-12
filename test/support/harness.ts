@@ -31,9 +31,40 @@ import type { PgSessionStore } from '../../src/infrastructure/session/pg-session
 import { configureApp } from '../../src/presentation/http/app.setup';
 
 export const PASSWORD = 'cometa verde sobre el nevado del tolima';
-// Contraseñas SOLO del servidor de pruebas (los roles son globales del servidor).
-const APP_PASSWORD = process.env.TEST_DB_APP_PASSWORD ?? 'app-solo-pruebas-123';
-const MIGRATOR_PASSWORD = process.env.TEST_DB_MIGRATOR_PASSWORD ?? 'migrador-solo-pruebas-123';
+// Contraseñas de los roles del servidor de PRUEBAS: aleatorias en cada proceso (o las indicadas por el entorno).
+// Los roles son globales del servidor y se les reasigna la contraseña al preparar cada base temporal.
+const APP_PASSWORD = process.env.TEST_DB_APP_PASSWORD ?? crypto.randomBytes(18).toString('base64url');
+const MIGRATOR_PASSWORD = process.env.TEST_DB_MIGRATOR_PASSWORD ?? crypto.randomBytes(18).toString('base64url');
+
+/**
+ * Ruta absoluta de psql: PSQL_PATH, o el primero que exista en directorios fijos de instalación
+ * (no se busca en el PATH, que podría contener carpetas modificables).
+ */
+export function psqlPath(): string {
+  if (process.env.PSQL_PATH) {
+    if (!path.isAbsolute(process.env.PSQL_PATH)) throw new Error('PSQL_PATH debe ser una ruta absoluta.');
+    return process.env.PSQL_PATH;
+  }
+  const exe = process.platform === 'win32' ? 'psql.exe' : 'psql';
+  const versioned = (base: string, tail: string[]) =>
+    fs.existsSync(base)
+      ? fs
+          .readdirSync(base)
+          .filter((v) => /^\d+$/.test(v))
+          .sort((a, b) => Number(b) - Number(a))
+          .map((v) => path.join(base, v, ...tail))
+      : [];
+  const candidates = [
+    '/usr/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    ...versioned('/usr/lib/postgresql', ['bin']),
+    ...versioned('C:\\Program Files\\PostgreSQL', ['bin']),
+  ].map((d) => path.join(d, exe));
+  const found = candidates.find((c) => fs.existsSync(c));
+  if (!found) throw new Error('No se encontró psql. Instale el cliente de PostgreSQL o defina PSQL_PATH con su ruta absoluta.');
+  return found;
+}
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 
 /** Reloj controlable: permite simular expiraciones sin esperar. */
@@ -85,7 +116,7 @@ export async function provisionDatabase(): Promise<{ dbName: string; env: NodeJS
   const u = new URL(admin);
   // Los roles son globales del servidor: si ya existen se les asigna la contraseña de esta corrida.
   execFileSync(
-    'psql',
+    psqlPath(),
     [
       admin,
       '-q',

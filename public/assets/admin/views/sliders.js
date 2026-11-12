@@ -53,7 +53,12 @@ function sliderForm(ctx, s, onSaved) {
   });
   save.addEventListener('click', () =>
     busy(save, async () => {
-      const body = { nombre: nombre.value, ubicacion: ubicacion.value.trim(), activo: activo.querySelector('input').checked, ...(s ? { version: s.version } : {}) };
+      const body = {
+        nombre: nombre.value,
+        ubicacion: ubicacion.value.trim(),
+        activo: activo.querySelector('input').checked,
+        ...(s ? { version: s.version } : {}),
+      };
       try {
         const { data } = s ? await patch(`/sliders/${s.id}`, body) : await post('/sliders', body);
         m.close();
@@ -157,7 +162,7 @@ async function detail(main, ctx, id) {
       const ids = slides.map((d) => d.id);
       [ids[i], ids[i + delta]] = [ids[i + delta], ids[i]];
       try {
-        draw((await put(`/sliders/${s.id}/orden`, { orden: ids, version: s.version })).data);
+        await draw((await put(`/sliders/${s.id}/orden`, { orden: ids, version: s.version })).data);
       } catch (e) {
         toast(errorMessage(e), 'error');
       }
@@ -213,7 +218,7 @@ async function detail(main, ctx, id) {
                           type: 'button',
                           onclick: async () => {
                             try {
-                              draw((await patch(`/sliders/${s.id}/diapositivas/${d.id}`, { activa: !d.activa, version: s.version })).data);
+                              await draw((await patch(`/sliders/${s.id}/diapositivas/${d.id}`, { activa: !d.activa, version: s.version })).data);
                             } catch (e) {
                               toast(errorMessage(e), 'error');
                             }
@@ -237,7 +242,7 @@ async function detail(main, ctx, id) {
                             )
                               return;
                             try {
-                              draw((await del(`/sliders/${s.id}/diapositivas/${d.id}`, { version: s.version })).data);
+                              await draw((await del(`/sliders/${s.id}/diapositivas/${d.id}`, { version: s.version })).data);
                               toast('Diapositiva eliminada.');
                             } catch (e) {
                               toast(errorMessage(e), 'error');

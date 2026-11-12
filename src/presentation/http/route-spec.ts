@@ -80,7 +80,7 @@ export function errorCodes(spec: RouteSpec): number[] {
   if (spec.rateLimit) errors.add(429);
   if (spec.upload || spec.request?.body) errors.add(413);
   if (spec.request?.params) errors.add(404);
-  return [...errors].sort();
+  return [...errors].sort((a, b) => a - b);
 }
 
 function objectProperties(schema: z.ZodType | undefined): Array<{ name: string; schema: Record<string, unknown>; required: boolean; description?: string }> {

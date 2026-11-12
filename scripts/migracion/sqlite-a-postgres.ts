@@ -289,15 +289,23 @@ function canonical(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
   if (v && typeof v === 'object')
     return `{${Object.keys(v)
-      .sort()
+      .sort(compareCodeUnits)
       .map((k) => `${JSON.stringify(k)}:${canonical((v as Row)[k])}`)
       .join(',')}}`;
   return JSON.stringify(v);
 }
 
+/** Orden por unidades de código UTF-16: idéntico en cualquier configuración regional (la huella debe ser estable). */
+function compareCodeUnits(a: string, b: string): number {
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
+}
+
 function fingerprint(rows: Row[], cols: Record<string, Kind>): string {
   // Las filas se ordenan por su forma canónica: la huella no depende de la intercalación de cada motor.
-  const lines = rows.map((r) => canonical(Object.keys(cols).map((c) => (cols[c] === 'json' && r[c] !== null ? JSON.parse(String(r[c])) : r[c])))).sort();
+  const lines = rows
+    .map((r) => canonical(Object.keys(cols).map((c) => (cols[c] === 'json' && r[c] !== null ? JSON.parse(String(r[c])) : r[c]))))
+    .sort(compareCodeUnits);
   return crypto.createHash('sha256').update(lines.join('\n')).digest('hex');
 }
 

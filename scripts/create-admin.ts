@@ -28,12 +28,22 @@ function ask(question: string, hidden = false): Promise<string> {
   });
 }
 
+/** Validación básica de correo en tiempo lineal (sin retroceso de expresiones regulares). */
+function correoValido(email: string): boolean {
+  if (email.length > 254 || /\s/.test(email)) return false;
+  const at = email.indexOf('@');
+  if (at < 1 || at !== email.lastIndexOf('@')) return false;
+  const dominio = email.slice(at + 1);
+  const punto = dominio.lastIndexOf('.');
+  return punto > 0 && punto < dominio.length - 1;
+}
+
 async function main(): Promise<void> {
   const email = (process.env.ADMIN_EMAIL ?? (await ask('Correo institucional: '))).trim().toLowerCase();
   const nombre = (process.env.ADMIN_NOMBRE ?? (await ask('Nombre completo: '))).trim();
   const password = process.env.ADMIN_PASSWORD ?? (await ask('Contraseña (mínimo 12 caracteres, no común): ', true));
   const confirmar = process.env.ADMIN_PASSWORD ?? (await ask('Confirmar contraseña: ', true));
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Correo inválido.');
+  if (!correoValido(email)) throw new Error('Correo inválido.');
   if (nombre.length < 3) throw new Error('Nombre demasiado corto.');
   if (password !== confirmar) throw new Error('Las contraseñas no coinciden.');
   await withApp(async (app) => {

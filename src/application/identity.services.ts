@@ -251,7 +251,7 @@ export class RoleService {
         invalid.map((p) => ({ campo: 'permisos', mensaje: p })),
       );
     if (permisos.some((p) => !actor.permisos.has(p))) throw new ForbiddenError('No puede conceder permisos que usted no tiene.');
-    return [...new Set([...permisos, 'dashboard.access'])].sort();
+    return [...new Set([...permisos, 'dashboard.access'])].sort((a, b) => a.localeCompare(b));
   }
 
   catalog(actor: Actor | null) {
