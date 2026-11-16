@@ -62,8 +62,10 @@ jobs:
           echo "TEST_PG_ADMIN_URL=postgres://postgres:$pw@127.0.0.1:5432/postgres" >> "$GITHUB_ENV"
       - name: Contraseñas aleatorias de los roles de la base de CI
         run: |
-          echo "DB_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
-          echo "DB_MIGRATION_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+          app="$(openssl rand -hex 24)"; migr="$(openssl rand -hex 24)"
+          echo "::add-mask::$app"; echo "::add-mask::$migr"
+          echo "DB_PASSWORD=$app" >> "$GITHUB_ENV"
+          echo "DB_MIGRATION_PASSWORD=$migr" >> "$GITHUB_ENV"
       # Sin scripts de instalación: argon2 y sharp usan binarios precompilados del paquete.
       - run: npm ci --ignore-scripts
       - run: npm run lint
@@ -76,6 +78,11 @@ jobs:
         run: |
           psql "$TEST_PG_ADMIN_URL" -q -v app_password="$DB_PASSWORD" -v migrator_password="$DB_MIGRATION_PASSWORD" \
             -v db_name=semibague_ci -f scripts/postgres/01-crear-roles-y-base.sql
+          # Las pruebas de integración ya crearon los roles con otras contraseñas: se fijan las de esta ejecución.
+          psql "$TEST_PG_ADMIN_URL" -q -v ON_ERROR_STOP=1 -v app_password="$DB_PASSWORD" -v migrator_password="$DB_MIGRATION_PASSWORD" <<'SQL'
+          ALTER ROLE semibague_app PASSWORD :'app_password';
+          ALTER ROLE semibague_migrator PASSWORD :'migrator_password';
+          SQL
           node node_modules/typeorm/cli.js migration:run -d dist/src/infrastructure/database/migration-cli.js
       - name: Sin desviación entre entidades y esquema
         run: node node_modules/typeorm/cli.js migration:generate -d dist/src/infrastructure/database/migration-cli.js /tmp/semibague-drift --dr --ch
