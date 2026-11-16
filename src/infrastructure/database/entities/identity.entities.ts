@@ -100,4 +100,6 @@ export class AuditoriaEventoEntity {
   @Column('timestamptz', { name: 'creado_en' }) creadoEn!: Date;
   @Column('text', { name: 'hash_anterior' }) hashAnterior!: string;
   @Column('text') hash!: string;
+  /** Identificador de la clave del llavero con que se firmó el eslabón (null en eventos anteriores a la rotación). */
+  @Column('text', { name: 'clave_id', nullable: true }) claveId!: string | null;
 }

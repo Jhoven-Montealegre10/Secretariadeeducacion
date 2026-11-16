@@ -54,7 +54,7 @@ describe('Construcción de SQL', () => {
 });
 
 describe('Criptografía', () => {
-  const svc = new CryptoService({ dataKey: crypto.randomBytes(32) });
+  const svc = new CryptoService({ dataKeys: [{ id: 'k1', key: crypto.randomBytes(32), retired: false }] });
 
   test('AES-256-GCM: cifra con IV aleatorio, descifra y detecta manipulación', () => {
     const a = svc.encrypt('dato personal');
@@ -62,14 +62,16 @@ describe('Criptografía', () => {
     assert.notEqual(a, b);
     assert.equal(svc.decrypt(a), 'dato personal');
     const parts = String(a).split(':');
-    parts[3] = Buffer.from('otro contenido').toString('base64');
+    assert.equal(parts[0], 'v2');
+    assert.equal(parts[1], 'k1', 'identificador de la clave vigente');
+    parts[4] = Buffer.from('otro contenido').toString('base64');
     assert.throws(() => svc.decrypt(parts.join(':')));
     assert.equal(svc.encrypt(''), null);
     assert.equal(svc.decrypt(null), '');
   });
 
   test('otra clave no puede descifrar', () => {
-    const other = new CryptoService({ dataKey: crypto.randomBytes(32) });
+    const other = new CryptoService({ dataKeys: [{ id: 'k1', key: crypto.randomBytes(32), retired: false }] });
     assert.throws(() => other.decrypt(svc.encrypt('secreto')));
   });
 

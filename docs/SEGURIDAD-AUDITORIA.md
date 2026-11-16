@@ -202,3 +202,19 @@ La puerta de calidad de SonarQube Cloud falló con 23 hallazgos y 4,3 % de dupli
 | Expresiones regulares con retroceso superlineal | Recorte sin expresión regular y validación de correo en tiempo lineal |
 | Conexión SMTP sin TLS obligatorio | `requireTLS` siempre, con TLS 1.2 como mínimo y validación de certificado (el servidor SMTP debe admitir STARTTLS o `smtps://`) |
 | Duplicación (migraciones con el contenido inicial y lista del buscador) | Excluidos solo del análisis de duplicados en `.sonarcloud.properties`; se siguen analizando por seguridad y confiabilidad |
+
+## 10. Gestión de secretos y rotación de claves
+
+| Control | Implementación | Evidencia |
+|---|---|---|
+| Secretos fuera del código, de Git, del frontend y de `.env` | `SecretSource` lee archivos del gestor de secretos (`NOMBRE_FILE`, `SECRETS_DIR`, systemd `LoadCredential`); en producción rechaza secretos en variables de entorno | `auth.test.ts` (configuración de producción), `secretos.test.ts` (unitarias) |
+| Archivos de secretos protegidos | Rechazo si cualquier usuario puede escribirlos; aviso si cualquiera puede leerlos; escritura atómica 0600 | `secretos.test.ts` |
+| Rotación de la clave de datos sin interrupciones | Llavero `DATA_ENCRYPTION_KEYS` con identificadores; cifrado `v2:<id>:…`; tokens, códigos, sesiones e índices se verifican con todas las claves activas; `recifrar` por lotes y con control optimista | `test/integration/secretos.test.ts` |
+| Auditoría verificable tras rotar | Cada evento guarda `clave_id`; una clave retirada solo verifica la auditoría antigua | `secretos.test.ts` |
+| Contraseña de PostgreSQL dinámica | Se relee del archivo en cada conexión nueva; `rotar-bd` la cambia sin reiniciar | `secretos.test.ts` |
+| Rotación del secreto de sesión | `SESSION_SECRETS`: el primero firma, los anteriores verifican | `rotar-sesion` (prueba de la herramienta) |
+| Identificación sin revelar valores | Huella SHA-256 de cada clave; la herramienta y los errores nunca muestran valores | `secretos.test.ts` |
+| Política de vigencia | Aviso al arrancar si la clave vigente supera `SECRETS_MAX_AGE_DAYS` (90 por defecto) | `secretos.test.ts` |
+
+Procedimientos en [`SECRETOS.md`](SECRETOS.md). Pendiente de la entidad: elegir y configurar el gestor de secretos
+(Vault, nube o systemd) y programar las rotaciones.

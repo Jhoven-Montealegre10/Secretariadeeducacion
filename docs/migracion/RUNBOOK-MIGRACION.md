@@ -15,6 +15,8 @@ no se usa sincronización automática del esquema; las credenciales de migració
 3. **Ensayo en preproducción** con una copia del SQLite (anonimizada si se usa fuera de producción):
    `npm run backup:sqlite …` → `npm run migrate:from-sqlite -- … --simulacro` → corregir lo que reporte.
 4. Confirmar que se tiene la `DATA_ENCRYPTION_KEY` del sistema anterior (sin ella la verificación falla y nada se escribe).
+   En la versión 4 esa clave entra como primera línea del llavero `DATA_ENCRYPTION_KEYS` (o en el formato anterior de una
+   sola clave, que se trata como `k0`). Después de la migración, rote: `npm run secrets -- rotar-datos` (ver `docs/SECRETOS.md`).
 5. Anunciar la ventana a los editores (estimado: 30 minutos, incluida la verificación funcional).
 
 ## 1. Ventana de corte

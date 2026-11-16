@@ -1,11 +1,13 @@
 /**
- * Configuración tipada. Los secretos se leen SOLO de variables de entorno (archivo .env del
- * servidor o gestor de secretos), nunca del código ni del navegador. En producción, el arranque
- * falla si faltan secretos, si APP_URL no usa HTTPS o si la conexión remota a PostgreSQL no usa TLS verificado.
+ * Configuración tipada. Los secretos (claves, contraseñas, SMTP) los entrega un gestor de secretos como
+ * archivos (ver src/config/secrets.ts y docs/SECRETOS.md); nunca están en el código ni en el navegador, y en
+ * producción tampoco en variables de entorno ni en .env. En producción el arranque falla si faltan secretos,
+ * si llegan por el entorno, si APP_URL no usa HTTPS o si la conexión remota a PostgreSQL no usa TLS verificado.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { keyCreatedAt, type KeyEntry, parseKeyring, parseSecretList, SecretError, SecretSource } from './secrets';
 
 export type SslMode = 'disable' | 'require' | 'verify-full';
 
@@ -14,9 +16,10 @@ export interface DatabaseConfig {
   port: number;
   database: string;
   user: string;
-  password: string;
+  /** Se evalúa en cada conexión nueva: si el gestor rota la contraseña, se usa la nueva sin reiniciar. */
+  password: () => string;
   migrationUser: string;
-  migrationPassword: string;
+  migrationPassword: () => string;
   ssl: SslMode;
   sslCaFile: string;
   poolMax: number;
@@ -44,8 +47,11 @@ export interface AppConfig {
   mediaDir: string;
   uploadsDir: string;
   devMailDir: string;
-  sessionSecret: string;
-  dataKey: Buffer;
+  /** Llavero de sesión: el primero firma las cookies; todos las verifican (rotación sin cerrar sesiones). */
+  sessionSecrets: string[];
+  /** Llavero de datos: la primera clave activa cifra y firma; las demás descifran y verifican. */
+  dataKeys: KeyEntry[];
+  secrets: { maxAgeDays: number; origins: Record<string, string> };
   session: { idleMs: number; absoluteMs: number; reauthMs: number; pendingMfaMs: number };
   mfa: { issuer: string };
   mail: { from: string; smtpUrl: string };
@@ -80,24 +86,60 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       .filter(Boolean);
   const errors: string[] = [];
 
-  const secret = (name: string, minLength: number): string => {
-    const value = env[name];
-    if (value && value.length >= minLength) return value;
-    if (isProd) errors.push(`Falta ${name} (mínimo ${minLength} caracteres).`);
-    return crypto.randomBytes(32).toString('hex');
-  };
-  const key = (name: string): Buffer => {
-    const value = env[name];
-    if (value) {
-      const buf = Buffer.from(value, 'base64');
-      if (buf.length === 32) return buf;
-      errors.push(`${name} debe ser una clave de 32 bytes en base64 (npm run generate-keys).`);
-    } else if (isProd) {
-      errors.push(`Falta ${name}. El servidor no arranca sin ella en producción.`);
-    } else if (!isTest) {
-      console.warn(`[config] ${name} no definida: se usa una clave temporal SOLO para desarrollo.`);
+  const source = new SecretSource({ env, isProd, warn: isTest ? () => undefined : undefined });
+  const origins: Record<string, string> = {};
+  /** Resuelve un secreto y registra su origen (sin el valor). Los errores de la fuente se acumulan. */
+  const resolveSecret = (...names: string[]) => {
+    for (const name of names) {
+      try {
+        const r = source.resolve(name);
+        if (r) {
+          origins[name] = r.origin;
+          return { name, ...r };
+        }
+      } catch (err) {
+        if (!(err instanceof SecretError)) throw err;
+        errors.push(err.message);
+        return null;
+      }
     }
-    return crypto.randomBytes(32);
+    return null;
+  };
+
+  const sessionSecrets = ((): string[] => {
+    const r = resolveSecret('SESSION_SECRETS', 'SESSION_SECRET');
+    if (r) {
+      try {
+        return parseSecretList(r.value, r.name, 32);
+      } catch (err) {
+        errors.push((err as Error).message);
+      }
+    } else if (isProd) errors.push('Falta SESSION_SECRETS (o SESSION_SECRET) como archivo de secreto.');
+    return [crypto.randomBytes(32).toString('hex')];
+  })();
+
+  const dataKeys = ((): KeyEntry[] => {
+    const r = resolveSecret('DATA_ENCRYPTION_KEYS', 'DATA_ENCRYPTION_KEY');
+    if (r) {
+      try {
+        return parseKeyring(r.value, r.name);
+      } catch (err) {
+        errors.push(`${(err as Error).message} (npm run secrets -- generar)`);
+      }
+    } else if (isProd) {
+      errors.push('Falta DATA_ENCRYPTION_KEYS (o DATA_ENCRYPTION_KEY). El servidor no arranca sin ella en producción.');
+    } else if (!isTest) {
+      console.warn('[config] DATA_ENCRYPTION_KEYS no definida: se usa una clave temporal SOLO para desarrollo.');
+    }
+    return [{ id: 'k0', key: crypto.randomBytes(32), retired: false }];
+  })();
+
+  /** Contraseña que se relee del archivo cuando cambia (rotación dinámica); en desarrollo puede venir del entorno. */
+  const dynamicSecret = (...names: string[]): (() => string) | null => {
+    const r = resolveSecret(...names);
+    if (!r) return null;
+    const { file, value, name } = r;
+    return file ? () => source.reread(name, file) : () => value;
   };
 
   const port = num('PORT', 3000);
@@ -112,16 +154,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (isProd && !LOCAL_HOSTS.has(dbHost) && !dbHost.startsWith('/') && ssl !== 'verify-full') {
     errors.push('La conexión a PostgreSQL en otro servidor exige DB_SSL=verify-full (TLS con validación de certificado).');
   }
-  if (isProd && !env.DB_PASSWORD && !dbHost.startsWith('/')) errors.push('Falta DB_PASSWORD.');
+  const dbPassword = dynamicSecret('DB_PASSWORD');
+  if (isProd && !dbPassword && !dbHost.startsWith('/')) errors.push('Falta DB_PASSWORD como archivo de secreto.');
+  const migrationPassword = dynamicSecret('DB_MIGRATION_PASSWORD') ?? dbPassword;
+  const smtp = resolveSecret('SMTP_URL');
 
   const db: DatabaseConfig = {
     host: dbHost,
     port: num('DB_PORT', 5432),
     database: env.DB_NAME || (isTest ? 'semibague_test' : 'semibague'),
     user: env.DB_USER || 'semibague_app',
-    password: env.DB_PASSWORD || '',
+    password: dbPassword ?? (() => ''),
     migrationUser: env.DB_MIGRATION_USER || env.DB_USER || 'semibague_migrator',
-    migrationPassword: env.DB_MIGRATION_PASSWORD || env.DB_PASSWORD || '',
+    migrationPassword: migrationPassword ?? (() => ''),
     ssl,
     sslCaFile: env.DB_SSL_CA_FILE || '',
     poolMax: num('DB_POOL_MAX', 10),
@@ -148,8 +193,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     mediaDir: env.MEDIA_DIR || path.join(storageDir, 'media'),
     uploadsDir: env.UPLOADS_DIR || path.join(storageDir, 'uploads'),
     devMailDir: path.join(storageDir, 'correo-desarrollo'),
-    sessionSecret: secret('SESSION_SECRET', 32),
-    dataKey: key('DATA_ENCRYPTION_KEY'),
+    sessionSecrets,
+    dataKeys,
+    secrets: { maxAgeDays: num('SECRETS_MAX_AGE_DAYS', 90), origins },
     session: {
       idleMs: num('SESSION_IDLE_MINUTES', 30) * 60_000,
       absoluteMs: num('SESSION_ABSOLUTE_HOURS', 8) * 3_600_000,
@@ -157,7 +203,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       pendingMfaMs: 5 * 60_000,
     },
     mfa: { issuer: env.MFA_ISSUER || 'SEM Ibagué' },
-    mail: { from: env.MAIL_FROM || 'Portal SEM Ibagué <no-responder@example.invalid>', smtpUrl: env.SMTP_URL || '' },
+    mail: { from: env.MAIL_FROM || 'Portal SEM Ibagué <no-responder@example.invalid>', smtpUrl: smtp?.value ?? '' },
     uploads: {
       maxDocumentBytes: 10 * 1024 * 1024,
       maxImageBytes: num('MAX_IMAGE_MB', 8) * 1024 * 1024,
@@ -180,7 +226,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 
   if (errors.length) throw new Error(`Configuración inválida:\n- ${errors.join('\n- ')}`);
+  const dataKeyConfigured = 'DATA_ENCRYPTION_KEYS' in origins || 'DATA_ENCRYPTION_KEY' in origins;
+  if (!isTest && dataKeyConfigured) {
+    for (const w of secretAgeWarnings(config)) console.warn(`[secretos] ${w}`);
+  }
   return config;
+}
+
+/** Avisos de rotación: claves vigentes más antiguas que la política (SECRETS_MAX_AGE_DAYS). */
+export function secretAgeWarnings(config: Pick<AppConfig, 'dataKeys' | 'secrets'>, now = Date.now()): string[] {
+  const current = config.dataKeys.find((k) => !k.retired);
+  const created = current ? keyCreatedAt(current.id) : null;
+  if (!current) return [];
+  if (!created) return [`La clave de datos vigente (${current.id}) no tiene fecha: rótela con "npm run secrets -- rotar-datos".`];
+  const days = Math.floor((now - created.getTime()) / 86_400_000);
+  return days > config.secrets.maxAgeDays
+    ? [`La clave de datos vigente (${current.id}) tiene ${days} días; la política es rotarla cada ${config.secrets.maxAgeDays}.`]
+    : [];
 }
 
 export const APP_CONFIG = Symbol('APP_CONFIG');

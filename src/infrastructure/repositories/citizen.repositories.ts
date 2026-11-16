@@ -105,7 +105,9 @@ export class PqrsdRepository {
   /** Consulta ciudadana: exige radicado y documento; misma respuesta si cualquiera falla. */
   async findByRadicadoAndDocument(radicado: string, documento: string): Promise<PqrsdRecord | null> {
     const row = (await this.db.query('SELECT * FROM pqrsd WHERE radicado = $1', [radicado]))[0];
-    if (!row || !this.crypto.safeEqual(row.documento_hash as string, this.crypto.blindIndex(documento))) return null;
+    // Se compara con el índice de cada clave activa: las PQRSD radicadas antes de una rotación siguen consultándose.
+    const indices = this.crypto.blindIndexAll(documento);
+    if (!row || !indices.some((ix) => this.crypto.safeEqual(row.documento_hash as string, ix))) return null;
     return this.decryptRow(row);
   }
 

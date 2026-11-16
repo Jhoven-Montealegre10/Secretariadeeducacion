@@ -133,7 +133,7 @@ export class AuthService {
     let metodo = 'totp';
     if (input.codigoRecuperacion) {
       metodo = 'codigo_recuperacion';
-      ok = await this.credentials.consumeRecoveryCode(user.id, this.crypto.tokenHash(normalizeCode(input.codigoRecuperacion)));
+      ok = await this.credentials.consumeRecoveryCode(user.id, this.crypto.tokenHashAll(normalizeCode(input.codigoRecuperacion)));
     } else {
       const step = this.totp.verify(this.crypto.decrypt(user.mfaSecretoEnc), input.codigo, this.clock.now());
       ok = step !== null && (await this.users.consumeTotpStep(user.id, step)); // rechaza códigos ya usados
@@ -279,7 +279,7 @@ export class AuthService {
    */
   async resetPassword(token: string, nueva: string, ip: string | null): Promise<void> {
     const invalid = () => new ValidationError('El enlace no es válido o expiró. Solicite uno nuevo.', [{ campo: 'token', mensaje: 'Inválido o expirado' }]);
-    const record = await this.credentials.findResetToken(this.crypto.tokenHash(String(token ?? '')));
+    const record = await this.credentials.findResetToken(this.crypto.tokenHashAll(String(token ?? '')));
     if (!record || record.usadoEn || record.expiraEn < this.clock.now()) throw invalid();
     const user = await this.users.findById(record.usuarioId);
     if (!user || !user.activo) throw invalid();

@@ -290,12 +290,14 @@ export class CredentialRepository {
   }
 
   /** Marca el código como usado de forma atómica; true solo la primera vez. */
-  async consumeRecoveryCode(userId: number, hash: string): Promise<boolean> {
+  async consumeRecoveryCode(userId: number, hashes: string[]): Promise<boolean> {
+    // Varios hash posibles: el mismo código calculado con cada clave activa del llavero (rotación).
     return (
-      (await this.db.run('UPDATE codigos_recuperacion SET usado_en = now() WHERE usuario_id = $1 AND codigo_hash = $2 AND usado_en IS NULL', [
-        userId,
-        hash,
-      ])) === 1
+      (await this.db.run(
+        `UPDATE codigos_recuperacion SET usado_en = now()
+         WHERE id = (SELECT id FROM codigos_recuperacion WHERE usuario_id = $1 AND codigo_hash = ANY($2) AND usado_en IS NULL LIMIT 1)`,
+        [userId, hashes],
+      )) === 1
     );
   }
 
@@ -315,8 +317,8 @@ export class CredentialRepository {
     return this.db.run('UPDATE tokens_recuperacion SET usado_en = now() WHERE usuario_id = $1 AND usado_en IS NULL', [userId]);
   }
 
-  async findResetToken(tokenHash: string): Promise<ResetTokenRecord | null> {
-    const row = await this.db.one('SELECT id, usuario_id, expira_en, usado_en FROM tokens_recuperacion WHERE token_hash = $1', [tokenHash]);
+  async findResetToken(tokenHashes: string[]): Promise<ResetTokenRecord | null> {
+    const row = await this.db.one('SELECT id, usuario_id, expira_en, usado_en FROM tokens_recuperacion WHERE token_hash = ANY($1) LIMIT 1', [tokenHashes]);
     if (!row) return null;
     return { id: row.id as number, usuarioId: row.usuario_id as number, expiraEn: toMs(row.expira_en) ?? 0, usadoEn: (row.usado_en as string | null) ?? null };
   }
@@ -379,10 +381,11 @@ export class AuditRepository {
       await this.db.advisoryXactLock(LOCKS.AUDIT_CHAIN);
       const previous = (await this.db.scalar<string | undefined>('SELECT hash FROM auditoria_eventos ORDER BY id DESC LIMIT 1')) ?? 'genesis';
       const creadoEn = new Date().toISOString().replace('T', ' ').slice(0, 19);
-      const hash = this.crypto.auditChainHash(previous, { ...event, creadoEn });
+      const claveId = this.crypto.currentKeyId;
+      const hash = this.crypto.auditChainHash(previous, { ...event, creadoEn }, claveId);
       await this.db.run(
-        `INSERT INTO auditoria_eventos (usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        `INSERT INTO auditoria_eventos (usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash, clave_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           event.usuarioId,
           event.usuarioEmail,
@@ -395,6 +398,7 @@ export class AuditRepository {
           creadoEn,
           previous,
           hash,
+          claveId,
         ],
       );
     });
@@ -424,7 +428,7 @@ export class AuditRepository {
     let lastId = 0;
     for (;;) {
       const rows = await this.db.query(
-        `SELECT id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash
+        `SELECT id, usuario_id, usuario_email, accion, recurso, recurso_id, resultado, detalle, ip_hash, creado_en, hash_anterior, hash, clave_id
          FROM auditoria_eventos WHERE id > $1 ORDER BY id LIMIT $2`,
         [lastId, batch],
       );
@@ -441,8 +445,9 @@ export class AuditRepository {
           ipHash: (r.ip_hash as string | null) ?? null,
           creadoEn: r.creado_en as string,
         };
-        if (r.hash_anterior !== previous || this.crypto.auditChainHash(previous, row) !== r.hash) return { idAlterado: Number(r.id) };
-        previous = r.hash;
+        const firma = this.crypto.verifyAuditLink(previous, row, r.hash as string, (r.clave_id as string | null) ?? null);
+        if (r.hash_anterior !== previous || !firma) return { idAlterado: Number(r.id) };
+        previous = r.hash as string;
         lastId = Number(r.id);
       }
     }

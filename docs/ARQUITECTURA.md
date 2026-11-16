@@ -109,7 +109,7 @@ src/
     web/                     Controladores HTML y helpers de vistas
 views/                       Plantillas EJS (sin cambios de diseño)
 public/                      CSS, JS del sitio y SPA del panel
-scripts/                     create-admin, seed, generate-keys, export-openapi, postgres/, migracion/
+scripts/                     create-admin, seed, generate-keys, secretos (rotación), export-openapi, postgres/, migracion/
 test/                        unit/, integration/ (PostgreSQL real), e2e/ (Playwright), load/ (autocannon), support/, fixtures/
 docs/                        Arquitectura, ADR, versiones, API, permisos, despliegue, migración, QA, seguridad
 ```

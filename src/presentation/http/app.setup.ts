@@ -70,7 +70,7 @@ export async function configureApp(app: NestExpressApplication): Promise<PgSessi
   app.use(
     session({
       name: sessionCookieName(config.isProd),
-      secret: config.sessionSecret,
+      secret: config.sessionSecrets, // el primero firma; todos verifican (rotación sin cerrar sesiones)
       store,
       resave: false,
       saveUninitialized: false,

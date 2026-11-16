@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { UserRepository } from '../../src/infrastructure/repositories/identity.repositories';
@@ -219,14 +221,41 @@ describe('Duración de la sesión y configuración de producción', () => {
         env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', ...env },
         encoding: 'utf8',
       });
-    const keys = { SESSION_SECRET: 'x'.repeat(48), DATA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'), DB_PASSWORD: 'ficticia' };
+    // En producción los secretos llegan como ARCHIVOS del gestor de secretos (SECRETS_DIR o NOMBRE_FILE).
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sem-secretos-'));
+    const write = (name: string, value: string) => fs.writeFileSync(path.join(dir, name), `${value}\n`, { mode: 0o600 });
+    const values = {
+      SESSION_SECRETS: 'x'.repeat(48),
+      DATA_ENCRYPTION_KEYS: `k202611160000:${Buffer.alloc(32, 7).toString('base64')}`,
+      DB_PASSWORD: 'ficticia',
+    };
     const https = { APP_URL: 'https://portal.example.gov.co' };
-    assert.match(run(https).stderr, /SESSION_SECRET|DATA_ENCRYPTION_KEY/);
-    assert.match(run({ ...https, SESSION_SECRET: keys.SESSION_SECRET }).stderr, /DATA_ENCRYPTION_KEY/);
-    assert.match(run({ ...keys, APP_URL: 'http://portal.example.gov.co' }).stderr, /https/);
-    assert.match(run({ ...keys, ...https, DB_HOST: 'db.example.gov.co', DB_SSL: 'require' }).stderr, /verify-full/);
-    assert.match(run({ ...https, SESSION_SECRET: keys.SESSION_SECRET, DATA_ENCRYPTION_KEY: keys.DATA_ENCRYPTION_KEY }).stderr, /DB_PASSWORD/);
-    assert.equal(run({ ...keys, ...https }).status, 0);
+    try {
+      const files = { SECRETS_DIR: dir };
+      assert.match(run({ ...https, ...files }).stderr, /SESSION_SECRET|DATA_ENCRYPTION_KEY/);
+      write('SESSION_SECRETS', values.SESSION_SECRETS);
+      assert.match(run({ ...https, ...files }).stderr, /DATA_ENCRYPTION_KEY/);
+      write('DATA_ENCRYPTION_KEYS', values.DATA_ENCRYPTION_KEYS);
+      assert.match(run({ ...https, ...files }).stderr, /DB_PASSWORD/);
+      write('DB_PASSWORD', values.DB_PASSWORD);
+      assert.match(run({ ...files, APP_URL: 'http://portal.example.gov.co' }).stderr, /https/);
+      assert.match(run({ ...files, ...https, DB_HOST: 'db.example.gov.co', DB_SSL: 'require' }).stderr, /verify-full/);
+      assert.equal(run({ ...files, ...https }).status, 0, 'arranca con los secretos en archivos');
+
+      // Secretos en variables de entorno (o .env): prohibido en producción.
+      const envOnly = run({ ...https, ...values });
+      assert.notEqual(envOnly.status, 0);
+      assert.match(envOnly.stderr, /variable de entorno/);
+      assert.ok(!envOnly.stderr.includes(values.DB_PASSWORD) && !envOnly.stderr.includes(values.SESSION_SECRETS), 'el error no muestra valores');
+
+      // Archivo de secreto con escritura para cualquier usuario: rechazado.
+      if (process.platform !== 'win32') {
+        fs.chmodSync(path.join(dir, 'DB_PASSWORD'), 0o666);
+        assert.match(run({ ...files, ...https }).stderr, /escritura a cualquier usuario/);
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

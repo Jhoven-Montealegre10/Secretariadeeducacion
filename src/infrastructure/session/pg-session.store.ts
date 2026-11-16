@@ -28,8 +28,14 @@ export class PgSessionStore extends session.Store {
     clearInterval(this.timer);
   }
 
+  /** Clave con la clave de datos vigente (para guardar). */
   private key(sid: string): string {
     return this.crypto.tokenHash(`session:${sid}`);
+  }
+
+  /** Claves posibles con todas las claves activas (sesiones creadas antes de rotar). */
+  private keys(sid: string): string[] {
+    return this.crypto.tokenHashAll(`session:${sid}`);
   }
 
   private expiresAt(sess: session.SessionData | undefined): Date {
@@ -46,7 +52,10 @@ export class PgSessionStore extends session.Store {
 
   override get(sid: string, cb: Callback): void {
     this.db
-      .one<{ data: session.SessionData }>('SELECT data FROM sesiones WHERE sid = $1 AND expira > now()', [this.key(sid)])
+      .one<{ data: session.SessionData }>('SELECT data FROM sesiones WHERE sid = ANY($1) AND expira > now() ORDER BY sid = $2 DESC LIMIT 1', [
+        this.keys(sid),
+        this.key(sid),
+      ])
       .then((row) => cb(null, row ? row.data : null))
       .catch((err: unknown) => cb(err));
   }
@@ -59,20 +68,25 @@ export class PgSessionStore extends session.Store {
          ON CONFLICT (sid) DO UPDATE SET data = EXCLUDED.data, expira = EXCLUDED.expira, usuario_id = EXCLUDED.usuario_id`,
         [this.key(sid), JSON.stringify(sess), this.expiresAt(sess), userId],
       )
+      .then(async () => {
+        // Tras una rotación, la sesión pasa a la clave vigente y se borra la copia con la clave anterior.
+        const old = this.keys(sid).filter((k) => k !== this.key(sid));
+        if (old.length) await this.db.run('DELETE FROM sesiones WHERE sid = ANY($1)', [old]);
+      })
       .then(() => cb?.())
       .catch((err: unknown) => cb?.(err));
   }
 
   override destroy(sid: string, cb?: (err?: unknown) => void): void {
     this.db
-      .run('DELETE FROM sesiones WHERE sid = $1', [this.key(sid)])
+      .run('DELETE FROM sesiones WHERE sid = ANY($1)', [this.keys(sid)])
       .then(() => cb?.())
       .catch((err: unknown) => cb?.(err));
   }
 
   override touch(sid: string, sess: session.SessionData, cb?: () => void): void {
     this.db
-      .run('UPDATE sesiones SET expira = $1 WHERE sid = $2', [this.expiresAt(sess), this.key(sid)])
+      .run('UPDATE sesiones SET expira = $1 WHERE sid = ANY($2)', [this.expiresAt(sess), this.keys(sid)])
       .then(() => cb?.())
       .catch(() => cb?.());
   }

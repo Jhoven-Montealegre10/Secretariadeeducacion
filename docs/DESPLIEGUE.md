@@ -22,7 +22,7 @@ No use datos personales reales fuera de producción; anonimice `pqrsd` y `usuari
 ```bash
 npm ci                         # instala exactamente lo del package-lock.json
 npm run build                  # compila TypeScript a dist/
-npm run generate-keys          # SESSION_SECRET, DATA_ENCRYPTION_KEY y contraseñas de BD (al gestor de secretos)
+npm run secrets -- generar --dir /etc/semibague/secretos   # archivos de secretos 0600 (ver docs/SECRETOS.md)
 npm run migrate                # aplica migraciones con la cuenta de MIGRACIONES
 npm run seed                   # instituciones de referencia (solo instalación nueva)
 npm run create-admin           # primer administrador (no hay usuarios por defecto)
@@ -66,8 +66,10 @@ Antes de publicar, compruebe el escaneo con ClamAV real y una muestra EICAR en p
 3. **TLS con validación de certificado:** `ssl = on` en PostgreSQL y en la aplicación `DB_SSL=verify-full` y
    `DB_SSL_CA_FILE=/etc/semibague/pg-ca.pem`. El arranque en producción **falla** si la BD es remota y `DB_SSL` no es
    `verify-full`.
-4. **Credenciales separadas:** `DB_USER/DB_PASSWORD` (app) y `DB_MIGRATION_USER/DB_MIGRATION_PASSWORD` (migraciones,
-   solo en el paso de despliegue; no las deje en el entorno del servicio).
+4. **Credenciales separadas:** `DB_USER` + secreto `DB_PASSWORD` (app) y `DB_MIGRATION_USER` + secreto
+   `DB_MIGRATION_PASSWORD` (migraciones, solo en el paso de despliegue). Los secretos llegan como archivos del gestor
+   (nunca en el entorno ni en `.env`: en producción el arranque falla). `DB_PASSWORD` se relee en cada conexión:
+   `npm run secrets -- rotar-bd` la rota sin reiniciar. Ver [`SECRETOS.md`](SECRETOS.md).
 5. **Límites:** `DB_POOL_MAX` por instancia (por defecto 10). Con N instancias: N × `DB_POOL_MAX` + migraciones +
    monitoreo < `max_connections` (y el `CONNECTION LIMIT` del rol app, 200 por defecto). Tiempos:
    `DB_STATEMENT_TIMEOUT_MS=10000`, `DB_LOCK_TIMEOUT_MS=5000`, `DB_IDLE_IN_TRANSACTION_TIMEOUT_MS=15000`,
@@ -91,7 +93,12 @@ After=network-online.target
 User=semibague
 Group=semibague
 WorkingDirectory=/opt/semibague
-EnvironmentFile=/etc/semibague/semibague.env
+EnvironmentFile=/etc/semibague/semibague.env   # SOLO configuración no secreta
+# Secretos: archivos del gestor entregados por systemd (ver docs/SECRETOS.md)
+LoadCredential=SESSION_SECRETS:/etc/semibague/secretos/SESSION_SECRETS
+LoadCredential=DATA_ENCRYPTION_KEYS:/etc/semibague/secretos/DATA_ENCRYPTION_KEYS
+LoadCredential=DB_PASSWORD:/etc/semibague/secretos/DB_PASSWORD
+LoadCredential=SMTP_URL:/etc/semibague/secretos/SMTP_URL
 ExecStart=/usr/bin/node --enable-source-maps dist/src/main.js
 Restart=on-failure
 NoNewPrivileges=true
@@ -154,11 +161,11 @@ pg_dump -Fc -h db.interna -U semibague_migrator -d semibague -f semibague-$(date
 tar -C /var/lib/semibague -czf archivos-$(date +%F).tgz media uploads                       # archivos
 ```
 
-Opcional: archivado continuo de WAL (PITR) con la herramienta institucional. Guarde `DATA_ENCRYPTION_KEY` **aparte**.
+Opcional: archivado continuo de WAL (PITR) con la herramienta institucional. Guarde `DATA_ENCRYPTION_KEYS` (todo el llavero) **aparte**.
 
 **Prueba de restauración (trimestral, en preproducción):**
 `createdb … && pg_restore -d semibague_restore semibague-AAAA-MM-DD.dump`, restaurar archivos, misma
-`DATA_ENCRYPTION_KEY`, `npm run migrate`, iniciar, ingresar con MFA, abrir una PQRSD y una imagen y ejecutar
+`DATA_ENCRYPTION_KEYS`, `npm run migrate`, iniciar, ingresar con MFA, abrir una PQRSD y una imagen y ejecutar
 **Auditoría → Verificar integridad**. Registrar fecha y resultado. La suite de integración prueba en cada ejecución el
 ciclo respaldo → restauración de SQLite y la migración (ver `docs/QA-INFORME.md`).
 

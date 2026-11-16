@@ -50,7 +50,7 @@ export function connectionOptions(config: AppConfig): ClientConfig {
     port: db.port,
     database: db.database,
     user: db.user,
-    password: db.password,
+    password: db.password, // función: lee el secreto vigente en cada conexión
     ssl: sslOptions(db),
     connectionTimeoutMillis: db.connectionTimeoutMs,
     application_name: `semibague-cache-${config.instanceId}`,
@@ -66,7 +66,8 @@ export function dataSourceOptions(config: AppConfig, { forMigrations = false } =
     port: db.port,
     database: db.database,
     username: forMigrations ? db.migrationUser : db.user,
-    password: forMigrations ? db.migrationPassword : db.password,
+    // La contraseña real va en extra.password (función que pg evalúa en cada conexión nueva): si el gestor de
+    // secretos la rota, el pool la usa sin reiniciar la aplicación.
     schema: 'portal',
     ssl: sslOptions(db),
     entities: ENTITIES,
@@ -80,6 +81,7 @@ export function dataSourceOptions(config: AppConfig, { forMigrations = false } =
     maxQueryExecutionTime: db.slowQueryMs,
     applicationName: `semibague-${forMigrations ? 'migrador' : 'app'}-${config.instanceId}`,
     extra: {
+      password: forMigrations ? db.migrationPassword : db.password,
       max: forMigrations ? 2 : db.poolMax,
       connectionTimeoutMillis: db.connectionTimeoutMs,
       idleTimeoutMillis: db.idleTimeoutMs,

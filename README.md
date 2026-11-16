@@ -28,7 +28,7 @@ Requisitos: **Node.js 24 LTS** (o 26) y **PostgreSQL 16**.
 
 ```bash
 npm ci
-npm run generate-keys                       # secretos → .env (ver .env.example)
+npm run generate-keys                       # secretos de DESARROLLO → .env (en servidores: docs/SECRETOS.md)
 psql -v app_password=… -v migrator_password=… -v db_name=semibague_dev \
      -f scripts/postgres/01-crear-roles-y-base.sql   # roles de mínimo privilegio (como DBA)
 npm run migrate                             # esquema (cuenta de migraciones)
@@ -67,6 +67,7 @@ Resultados de la última verificación: [`docs/QA-INFORME.md`](docs/QA-INFORME.m
 | [`docs/migracion/`](docs/migracion/) | Inventario de SQLite, runbook de corte y reversión |
 | [`docs/ESTADISTICAS.md`](docs/ESTADISTICAS.md) | Métricas, privacidad y limitaciones |
 | [`docs/SEGURIDAD-AUDITORIA.md`](docs/SEGURIDAD-AUDITORIA.md) | Auditoría de seguridad y pendientes |
+| [`docs/SECRETOS.md`](docs/SECRETOS.md) | Gestión de secretos (gestor, archivos, sin `.env`), llaveros y rotación de claves |
 | [`docs/QA-INFORME.md`](docs/QA-INFORME.md) | Informe final de QA (incluye la revisión independiente) |
 
 ## Pendientes antes de publicar

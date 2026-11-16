@@ -18,6 +18,7 @@
     "seed": "node dist/scripts/seed.js",
     "create-admin": "node dist/scripts/create-admin.js",
     "generate-keys": "node dist/scripts/generate-keys.js",
+    "secrets": "node dist/scripts/secretos.js",
     "backup:sqlite": "node dist/scripts/migracion/respaldo-sqlite.js",
     "migrate:from-sqlite": "node dist/scripts/migracion/sqlite-a-postgres.js",
     "openapi:export": "node dist/scripts/export-openapi.js",

@@ -26,7 +26,16 @@ let mfaSecret: string;
 
 /** Construye una base SQLite con el esquema anterior y datos ficticios coherentes. */
 async function buildLegacy(dataKey: string): Promise<void> {
-  const c = new CryptoService({ dataKey: Buffer.from(dataKey, 'base64') });
+  const c = new CryptoService({ dataKeys: [{ id: 'k0', key: Buffer.from(dataKey, 'base64'), retired: false }] });
+  // La versión 3 cifraba en formato v1 (sin identificador de clave): se reproduce tal cual para comprobar que
+  // la versión 4 sigue leyendo esos datos.
+  const encKey = Buffer.from(crypto.hkdfSync('sha256', Buffer.from(dataKey, 'base64'), Buffer.alloc(0), 'sem-encryption', 32));
+  const legacyEncrypt = (plain: string) => {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', encKey, iv);
+    const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+    return ['v1', iv.toString('base64'), cipher.getAuthTag().toString('base64'), data.toString('base64')].join(':');
+  };
   const totp = new TotpService({ mfa: { issuer: 'Pruebas' } });
   const hash = await new PasswordHasher().hash(PASSWORD);
   mfaSecret = totp.createSecret();
@@ -55,7 +64,7 @@ async function buildLegacy(dataKey: string): Promise<void> {
     `INSERT INTO usuarios (id, email, nombre, password_hash, rol_id, activo, bloqueado_hasta, mfa_secreto_enc, mfa_activo, mfa_ultimo_paso, auth_version, creado_en, actualizado_en, password_actualizada_en)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 3, '2025-01-01 10:00:00', '2025-01-01 10:00:00', '2025-01-01 10:00:00')`,
   );
-  users.run(3, 'Admin.Migrado@Example.gov.co', 'Admin Migrado', hash, 1, 1, null, c.encrypt(mfaSecret), 1);
+  users.run(3, 'Admin.Migrado@Example.gov.co', 'Admin Migrado', hash, 1, 1, null, legacyEncrypt(mfaSecret), 1);
   users.run(12, 'editora@example.gov.co', 'Editora', hash, 2, 1, Date.now() + 3_600_000, null, 0);
   users.run(15, 'retirado@example.gov.co', 'Retirado', hash, 7, 0, null, null, 0);
   db.prepare(
@@ -84,11 +93,11 @@ async function buildLegacy(dataKey: string): Promise<void> {
      VALUES (6, 'SEM-2025-00000006', 'Petición', 'Radicada', 'Cédula de ciudadanía', ?, ?, ?, ?, NULL, ?, ?, '2025-03-03 10:00:00', '2025-03-03 10:00:00')`,
   ).run(
     c.blindIndex('1234567'),
-    c.encrypt('1234567'),
-    c.encrypt('Persona Ficticia'),
-    c.encrypt('ficticia@example.com'),
-    c.encrypt('Asunto ficticio'),
-    c.encrypt('Mensaje ficticio de prueba'),
+    legacyEncrypt('1234567'),
+    legacyEncrypt('Persona Ficticia'),
+    legacyEncrypt('ficticia@example.com'),
+    legacyEncrypt('Asunto ficticio'),
+    legacyEncrypt('Mensaje ficticio de prueba'),
   );
   db.prepare(
     "INSERT INTO tokens_recuperacion (id, usuario_id, token_hash, expira_en, creado_en) VALUES (2, 12, 'hash-ficticio', ?, '2025-03-01 10:00:00')",
@@ -127,7 +136,7 @@ function runTool(args: string[], env: NodeJS.ProcessEnv) {
 
 before(async () => {
   h = await createHarness();
-  await buildLegacy(h.config.dataKey.toString('base64'));
+  await buildLegacy(h.config.dataKeys[0].key.toString('base64'));
 });
 after(async () => {
   await h?.close();
@@ -159,9 +168,9 @@ describe('Migración', () => {
       DB_PORT: String(h.config.db.port),
       DB_NAME: h.config.db.database,
       DB_MIGRATION_USER: h.config.db.migrationUser,
-      DB_MIGRATION_PASSWORD: h.config.db.migrationPassword,
-      DB_PASSWORD: h.config.db.password,
-      DATA_ENCRYPTION_KEY: h.config.dataKey.toString('base64'),
+      DB_MIGRATION_PASSWORD: h.config.db.migrationPassword(),
+      DB_PASSWORD: h.config.db.password(),
+      DATA_ENCRYPTION_KEY: h.config.dataKeys[0].key.toString('base64'),
       MEDIA_DIR: h.config.mediaDir,
       UPLOADS_DIR: h.config.uploadsDir,
     };
