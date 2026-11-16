@@ -1,6 +1,9 @@
 {
   "all": true,
-  "include": ["src/**/*.js", "app.js", "server.js"],
-  "reporter": ["text", "html", "lcovonly", "json-summary"],
+  "src": ["dist/src"],
+  "include": ["dist/src/**/*.js"],
+  "exclude": ["dist/src/infrastructure/database/migrations/**", "**/*.d.ts"],
+  "exclude-after-remap": false,
+  "reporter": ["text-summary", "html", "lcovonly", "json-summary"],
   "reports-dir": "coverage"
 }

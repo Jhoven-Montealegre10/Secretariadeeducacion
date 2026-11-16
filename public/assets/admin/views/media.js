@@ -140,6 +140,7 @@ async function openDetail(ctx, id, onChange) {
             ...(m.tipo === 'imagen' ? { textoAlternativo: alt.value } : {}),
             descripcion: desc.value,
             visibilidad: vis.value,
+            version: m.version,
           });
           toast('Archivo actualizado.');
           dlg.close();

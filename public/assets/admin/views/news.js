@@ -234,9 +234,11 @@ async function edit(main, ctx, id) {
         imagenId: principal.read()[0] ?? null,
         fotos: fotos.read(),
         ...(f.slug.value ? { slug: f.slug.value } : {}),
+        ...(isNew ? {} : { version: n.version }),
       };
       try {
         const { data } = isNew ? await post('/noticias', body) : await put(`/noticias/${n.id}`, body);
+        n.version = data.version;
         toast(data.estado === 'publicada' ? 'Noticia publicada. Ya aparece en el inicio.' : 'Borrador guardado.');
         if (isNew) ctx.navigate(`/admin/noticias/${data.id}`, { replace: true });
       } catch (err) {

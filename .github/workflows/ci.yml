@@ -1,0 +1,151 @@
+# Integración continua: calidad estática, pruebas unitarias y de integración contra PostgreSQL real,
+# contrato OpenAPI, auditoría de dependencias y pruebas E2E en Chromium, Firefox y WebKit.
+# Credenciales: no hay ninguna en este archivo. El servidor PostgreSQL de PRUEBAS es un contenedor efímero que solo
+# escucha en el runner; arranca con trust y un paso le asigna al superusuario una contraseña aleatoria y exige SCRAM.
+# Las contraseñas de los roles también se generan al azar en cada ejecución.
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_NAME: semibague_ci
+      DB_USER: semibague_app
+      DB_MIGRATION_USER: semibague_migrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cliente de PostgreSQL (psql)
+        # La imagen ubuntu-24.04 ya incluye psql; solo se instala si falta (evita depender de los espejos de apt).
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
+      - name: PostgreSQL de CI con contraseñas obligatorias (SCRAM)
+        # El contenedor arranca con trust solo para este paso: se asigna al superusuario una contraseña aleatoria de
+        # esta ejecución y se pasa la autenticación a scram-sha-256 (las pruebas verifican que una contraseña rotada
+        # deja de servir, lo que con trust no se puede comprobar).
+        run: |
+          pw="$(openssl rand -hex 24)"
+          echo "::add-mask::$pw"
+          psql "postgres://postgres@127.0.0.1:5432/postgres" -q -v ON_ERROR_STOP=1 -v pw="$pw" <<'SQL'
+          SET password_encryption = 'scram-sha-256';
+          ALTER ROLE postgres PASSWORD :'pw';
+          SQL
+          docker exec ${{ job.services.postgres.id }} sh -c 'sed -i -E "s/(trust|md5)[[:space:]]*$/scram-sha-256/" "$PGDATA/pg_hba.conf"'
+          psql "postgres://postgres:$pw@127.0.0.1:5432/postgres" -q -c "SELECT pg_reload_conf()"
+          if psql -w "postgres://postgres@127.0.0.1:5432/postgres" -q -c "SELECT 1" 2>/dev/null; then echo "trust sigue activo"; exit 1; fi
+          echo "TEST_PG_ADMIN_URL=postgres://postgres:$pw@127.0.0.1:5432/postgres" >> "$GITHUB_ENV"
+      - name: Contraseñas aleatorias de los roles de la base de CI
+        run: |
+          app="$(openssl rand -hex 24)"; migr="$(openssl rand -hex 24)"
+          echo "::add-mask::$app"; echo "::add-mask::$migr"
+          echo "DB_PASSWORD=$app" >> "$GITHUB_ENV"
+          echo "DB_MIGRATION_PASSWORD=$migr" >> "$GITHUB_ENV"
+      # Sin scripts de instalación: argon2 y sharp usan binarios precompilados del paquete.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - name: Base de CI con roles de mínimo privilegio y migraciones
+        run: |
+          psql "$TEST_PG_ADMIN_URL" -q -v app_password="$DB_PASSWORD" -v migrator_password="$DB_MIGRATION_PASSWORD" \
+            -v db_name=semibague_ci -f scripts/postgres/01-crear-roles-y-base.sql
+          # Las pruebas de integración ya crearon los roles con otras contraseñas: se fijan las de esta ejecución.
+          psql "$TEST_PG_ADMIN_URL" -q -v ON_ERROR_STOP=1 -v app_password="$DB_PASSWORD" -v migrator_password="$DB_MIGRATION_PASSWORD" <<'SQL'
+          ALTER ROLE semibague_app PASSWORD :'app_password';
+          ALTER ROLE semibague_migrator PASSWORD :'migrator_password';
+          SQL
+          node node_modules/typeorm/cli.js migration:run -d dist/src/infrastructure/database/migration-cli.js
+      - name: Sin desviación entre entidades y esquema
+        run: node node_modules/typeorm/cli.js migration:generate -d dist/src/infrastructure/database/migration-cli.js /tmp/semibague-drift --dr --ch
+      - name: Contrato OpenAPI sincronizado
+        run: npm run openapi:check
+      - run: npm audit --omit=dev
+
+  e2e:
+    needs: verificar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cliente de PostgreSQL (psql)
+        run: command -v psql >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client); psql --version
+      - name: PostgreSQL de CI con contraseñas obligatorias (SCRAM)
+        # El contenedor arranca con trust solo para este paso: se asigna al superusuario una contraseña aleatoria de
+        # esta ejecución y se pasa la autenticación a scram-sha-256 (las pruebas verifican que una contraseña rotada
+        # deja de servir, lo que con trust no se puede comprobar).
+        run: |
+          pw="$(openssl rand -hex 24)"
+          echo "::add-mask::$pw"
+          psql "postgres://postgres@127.0.0.1:5432/postgres" -q -v ON_ERROR_STOP=1 -v pw="$pw" <<'SQL'
+          SET password_encryption = 'scram-sha-256';
+          ALTER ROLE postgres PASSWORD :'pw';
+          SQL
+          docker exec ${{ job.services.postgres.id }} sh -c 'sed -i -E "s/(trust|md5)[[:space:]]*$/scram-sha-256/" "$PGDATA/pg_hba.conf"'
+          psql "postgres://postgres:$pw@127.0.0.1:5432/postgres" -q -c "SELECT pg_reload_conf()"
+          if psql -w "postgres://postgres@127.0.0.1:5432/postgres" -q -c "SELECT 1" 2>/dev/null; then echo "trust sigue activo"; exit 1; fi
+          echo "TEST_PG_ADMIN_URL=postgres://postgres:$pw@127.0.0.1:5432/postgres" >> "$GITHUB_ENV"
+      - run: npm ci --ignore-scripts
+      # Playwright de la versión exacta del lockfile (sin descargas de paquetes al vuelo).
+      - run: node node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+      - run: npm run build && node node_modules/typescript/bin/tsc -p tsconfig.json
+      - run: npm run test:e2e
+        env:
+          E2E_BROWSER: ${{ matrix.browser }}
+          E2E_OUT: test-results/e2e
+      - name: Prueba de aceptación (usuarios, recuperación, páginas, banners y enlaces)
+        if: matrix.browser == 'chromium'
+        run: npm run test:acceptance
+        env:
+          E2E_OUT: test-results/e2e/aceptacion
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.browser }}
+          path: test-results/e2e/
+          retention-days: 14

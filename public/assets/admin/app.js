@@ -41,7 +41,8 @@ const ctx = {
 
 function routeFor(pathname) {
   const sorted = [...MENU].sort((a, b) => b.path.length - a.path.length);
-  return sorted.find((r) => pathname === r.path || pathname.startsWith(`${r.path}/`));
+  // El resumen (/admin) solo responde a su ruta exacta: /admin/<algo-inexistente> no debe mostrarlo.
+  return sorted.find((r) => pathname === r.path || (r.path !== '/admin' && pathname.startsWith(`${r.path}/`)));
 }
 
 function renderMenu(pathname) {
@@ -64,13 +65,18 @@ async function render() {
     main.replaceChildren(h('h1', {}, 'Sin acceso'), h('p', {}, 'No tiene permisos para esta sección o la sección no existe.'));
     return;
   }
+  const rest = pathname.slice(route.path.length).split('/').filter(Boolean);
+  const noExiste = () => main.replaceChildren(h('h1', {}, 'No existe'), h('p', {}, 'El elemento que busca no existe o fue eliminado.'));
   main.replaceChildren(h('p', { class: 'state state--loading', role: 'status' }, 'Cargando…'));
   try {
+    // Solo se aceptan identificadores numéricos positivos (o "nueva" en páginas y noticias): lo demás no existe.
+    if (rest[0] && !/^[1-9]\d{0,9}$/.test(rest[0]) && rest[0] !== 'nueva') throw Object.assign(new Error('No existe'), { status: 404 });
     const mod = await route.load();
-    const rest = pathname.slice(route.path.length).split('/').filter(Boolean);
     await mod.render(main, ctx, rest);
   } catch (err) {
-    main.replaceChildren(h('h1', {}, 'Error'), errorBox(err, render));
+    // Un elemento inexistente (404, o id fuera de rango) se presenta igual que una ruta inexistente.
+    if (err?.status === 404 || (err?.status === 422 && rest[0])) noExiste();
+    else main.replaceChildren(h('h1', {}, 'Error'), errorBox(err, render));
   }
   const heading = main.querySelector('h1');
   if (heading) {

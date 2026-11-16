@@ -319,7 +319,6 @@ p {
   color: var(--govco-blue-dark);
 }
 .has-sub:hover > .submenu,
-.has-sub:focus-within > .submenu,
 .has-sub.open > .submenu {
   display: block;
 }
@@ -1374,4 +1373,9 @@ body.admin {
 }
 .hero-slider + .quick {
   margin-top: 24px;
+}
+
+/* Destino del enlace "Saltar al contenido": recibe el foco sin mostrar un contorno sobre toda la página. */
+#contenido:focus {
+  outline: none;
 }
