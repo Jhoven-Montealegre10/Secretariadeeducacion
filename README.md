@@ -1,76 +1,156 @@
 # Portal web – Secretaría de Educación Municipal de Ibagué
 
-Portal institucional con identidad **GOV.CO**, **panel de administración propio**, **API REST versionada con
-OpenAPI/Swagger**, arquitectura por capas (MVC) y controles de seguridad verificados con pruebas.
+## Para qué sirve
 
-**Versión 4:** TypeScript + **NestJS 12** sobre **Node.js 24 LTS**, **PostgreSQL 16** con **TypeORM** (migraciones
-versionadas). Diseño, contenidos y funciones de la versión anterior se conservan; los datos de SQLite se migran con una
-herramienta verificada (`docs/migracion/`).
+Es el portal institucional de la Secretaría de Educación Municipal de Ibagué. Tiene dos partes:
 
-## Qué incluye
+- **Sitio público** para la ciudadanía: noticias, páginas institucionales, normatividad, transparencia, buscador y
+  radicación y consulta de PQRSD (peticiones, quejas, reclamos, sugerencias y denuncias). Usa la identidad visual
+  GOV.CO, es responsive y está pensado para ser accesible.
+- **Panel de administración** para el personal autorizado: gestión de páginas, noticias, banners (sliders),
+  documentos, archivos multimedia, usuarios y roles, y estadísticas de visitas.
 
-| Módulo | Funciones |
+El panel y el sitio usan una **API REST** versionada y documentada con OpenAPI.
+
+## Tecnologías
+
+| Área | Tecnología |
 |---|---|
-| **Sitio público** | Inicio con noticias y slider, páginas institucionales editables, noticias, normatividad, PQRSD, buscador, transparencia. Responsive y accesible. |
-| **Acceso al panel** | Argon2id, **MFA TOTP obligatorio**, códigos de recuperación, recuperación por correo de un solo uso, sesiones en PostgreSQL revocables. |
-| **Usuarios y roles** | Invitación, edición, desactivación, eliminación, restablecimiento de MFA; permisos por módulo y acción. |
-| **Multimedia** | Imágenes y audios (validación por contenido, re-codificación, antimalware), búsqueda, reemplazo, aviso de uso. |
-| **Páginas / Noticias / Sliders** | Editor por bloques, borradores y vista previa protegida, publicación automática en el inicio, sliders por ubicación. |
-| **Ediciones simultáneas** | Bloqueo optimista: si otra persona guardó antes, `409 EDIT_CONFLICT` y aviso en el panel. |
-| **Estadísticas** | Visitas sin cookies ni IP, por lotes en segundo plano. |
-| **Auditoría** | Bitácora de solo inserción (triggers + permisos de PostgreSQL) con cadena HMAC verificable. |
-| **API REST** | `/api/v1` pública y privada, 70 operaciones; Swagger en `/api/docs` (pública) y `/admin/api-docs` (completa). |
-| **Operación** | `/health/live`, `/health/ready`, métricas en `/api/v1/sistema/metricas`, caché pública con invalidación. |
+| Lenguaje y entorno | TypeScript (modo estricto) sobre Node.js 24 LTS |
+| Framework | NestJS |
+| Base de datos | PostgreSQL 16, con TypeORM para la conexión y las migraciones |
+| Vistas del sitio | EJS (renderizado en el servidor) |
+| Panel | HTML, CSS y JavaScript sin frameworks, que consume la API |
+| Validación y contrato de la API | Zod y OpenAPI 3 (Swagger) |
+| Pruebas | node:test, Supertest y Playwright (Chromium, Firefox y WebKit) |
+| Calidad | ESLint, Prettier, c8 (cobertura) y SonarCloud |
 
-## Inicio rápido (desarrollo)
+## Arquitectura
 
-Requisitos: **Node.js 24 LTS** (o 26) y **PostgreSQL 16**.
+Es un monolito modular organizado por capas. Cada capa solo depende de las capas que tiene debajo:
+
+```
+src/
+├── presentation/     Entrada HTTP: controladores de la API, del sitio y del panel; vistas
+├── application/      Casos de uso (servicios): contenidos, usuarios, multimedia, PQRSD, estadísticas
+├── domain/           Reglas del negocio sin acceso a base de datos ni a red
+├── infrastructure/   PostgreSQL (entidades, migraciones, repositorios), almacenamiento de archivos,
+│                     correo, sesiones y caché
+└── config/           Configuración y lectura de secretos
+views/                Plantillas EJS del sitio público
+public/               Recursos estáticos (estilos, scripts, imágenes) y el panel
+scripts/              Herramientas de línea de comandos (migraciones, administrador inicial, secretos)
+test/                 Pruebas unitarias, de integración, de navegador (E2E) y de carga
+docs/                 Documentación técnica
+```
+
+- PostgreSQL es la única base de datos. También guarda las sesiones y la caché, así que no se necesitan otros
+  servicios.
+- Los archivos subidos (imágenes, audio, PDF) se guardan en disco, fuera de la carpeta pública. La base de datos solo
+  guarda su información descriptiva.
+- El esquema de la base de datos solo cambia mediante migraciones versionadas.
+
+Más detalle: [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y las decisiones registradas en [`docs/adr/`](docs/adr/).
+
+## Instalación local (desarrollo)
+
+### Requisitos
+
+- Node.js 24 LTS
+- PostgreSQL 16
+- Git
+
+### Pasos
+
+```bash
+# 1. Clonar e instalar dependencias (versiones exactas del package-lock.json)
+git clone <url-del-repositorio>
+cd Secretariadeeducacion
+npm ci
+npm run build
+
+# 2. Generar los secretos de desarrollo en una carpeta FUERA del repositorio
+npm run secrets -- generar --dir "$HOME/.semibague-secretos"
+
+# 3. Crear la base de datos y sus usuarios (se ejecuta como administrador de PostgreSQL)
+psql -U postgres \
+  -v app_password="$(cat "$HOME/.semibague-secretos/DB_PASSWORD")" \
+  -v migrator_password="$(cat "$HOME/.semibague-secretos/DB_MIGRATION_PASSWORD")" \
+  -v db_name=semibague_dev \
+  -f scripts/postgres/01-crear-roles-y-base.sql
+```
+
+4. Crear el archivo `.env` a partir de `.env.example`. Ese archivo **solo lleva configuración, nunca contraseñas**. Para
+   desarrollo, ajuste estos valores:
+
+   ```ini
+   NODE_ENV=development
+   APP_URL=http://localhost:3000
+   DB_HOST=127.0.0.1
+   DB_NAME=semibague_dev
+   DB_SSL=disable
+   SECRETS_DIR=/home/<usuario>/.semibague-secretos
+   STORAGE_DIR=./storage
+   ```
+
+```bash
+# 5. Crear las tablas, cargar los datos de referencia y crear el primer administrador
+npm run migrate
+npm run seed
+npm run create-admin
+
+# 6. Iniciar el portal
+npm run dev        # http://localhost:3000
+```
+
+En Windows (PowerShell) use `npm.cmd` si la política de ejecución bloquea `npm`. La guía
+[`docs/CALIDAD-Y-PRUEBAS.md`](docs/CALIDAD-Y-PRUEBAS.md) explica cómo preparar el entorno en Windows y en VS Code.
+
+## Pruebas
+
+Las pruebas de integración necesitan un PostgreSQL **exclusivo para pruebas**. Crean una base temporal y la eliminan
+al terminar; nunca usan datos reales.
+
+```bash
+export TEST_PG_ADMIN_URL="postgres://<usuario>:<clave>@127.0.0.1:5432/postgres"   # servidor de PRUEBAS
+
+npm run verify            # lint, formato, tipos, compilación, pruebas unitarias y de integración, contrato de la API
+npm run test:e2e          # pruebas en navegador real (Playwright)
+npm run test:acceptance   # recorrido completo del panel y del sitio
+npm run test:coverage     # pruebas con informe de cobertura
+```
+
+## Instalación en servidores (pruebas, preproducción y producción)
+
+### Requisitos del servidor
+
+- Linux con Node.js 24 LTS y PostgreSQL 16 (en el mismo servidor o en otro, con conexión TLS)
+- Proxy inverso con HTTPS (Nginx o Apache)
+- ClamAV, obligatorio para cargar archivos en producción
+- Servidor de correo SMTP con TLS
+- Un gestor de secretos: HashiCorp Vault, AWS/Azure/GCP Secret Manager, secretos de Docker/Kubernetes o
+  `LoadCredential` de systemd
+
+### Pasos generales
 
 ```bash
 npm ci
-npm run generate-keys                       # secretos de DESARROLLO → .env (en servidores: docs/SECRETOS.md)
-psql -v app_password=… -v migrator_password=… -v db_name=semibague_dev \
-     -f scripts/postgres/01-crear-roles-y-base.sql   # roles de mínimo privilegio (como DBA)
-npm run migrate                             # esquema (cuenta de migraciones)
-npm run seed                                # instituciones de referencia
-npm run build && npm run create-admin       # primer administrador
-npm run dev                                 # http://localhost:3000 — panel en /admin
+npm run build
+npm run secrets -- generar --dir /etc/semibague/secretos   # o cargar los secretos desde el gestor
+npm run migrate                                            # con la cuenta de migraciones
+npm run seed                                               # solo en una instalación nueva
+npm run create-admin
+npm start                                                  # normalmente como servicio de systemd
 ```
 
-## Calidad y verificación
+- En servidores, `NODE_ENV=production`. El portal **no arranca** si encuentra contraseñas en variables de entorno o
+  en `.env`: los secretos se entregan siempre como archivos del gestor de secretos.
+- Use una base de datos distinta para cada entorno. En pruebas y preproducción use datos anonimizados.
+- Las migraciones se aplican de forma explícita en cada despliegue, con un respaldo previo.
 
-La guía [Calidad y pruebas](docs/CALIDAD-Y-PRUEBAS.md) explica SonarQube for IDE, las tareas de VS Code y cómo
-consultar la cobertura. Los scripts funcionan igual en Windows, Linux y macOS; en PowerShell use `npm.cmd`
-si se bloquea `npm.ps1`.
+Guías completas:
 
-```bash
-npm run verify            # lint + formato + tipos + build + pruebas + contrato OpenAPI + npm audit
-npm run quality           # lo mismo, con cobertura (coverage/index.html y coverage/lcov.info)
-npm run test:unit         # 60 pruebas de dominio, infraestructura y servicios (sin BD)
-npm run test:integration  # 123 pruebas contra PostgreSQL real (requiere TEST_PG_ADMIN_URL de un servidor de PRUEBAS)
-npm run test:coverage     # unitarias + integración con cobertura (c8)
-npm run test:e2e          # navegador real (Playwright): panel, sitio, permisos, escritorio/tableta/móvil
-npm run test:load         # carga con autocannon en entorno autorizado
-```
-
-Resultados de la última verificación: [`docs/QA-INFORME.md`](docs/QA-INFORME.md).
-
-## Documentación
-
-| Documento | Contenido |
-|---|---|
-| [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y [`docs/adr/`](docs/adr/) | Capas, módulos NestJS, persistencia, concurrencia, decisiones |
-| [`docs/VERSIONES.md`](docs/VERSIONES.md) | Versiones, compatibilidad y política de actualización |
-| [`docs/API.md`](docs/API.md), [`docs/openapi.json`](docs/openapi.json) | Uso de la API, errores, versionado, conflictos de edición |
-| [`docs/PERMISOS.md`](docs/PERMISOS.md) | Matriz de permisos |
-| [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md) | Instalación, PostgreSQL seguro, servicio, proxy, salud, monitoreo, respaldos, restauración |
-| [`docs/migracion/`](docs/migracion/) | Inventario de SQLite, runbook de corte y reversión |
-| [`docs/ESTADISTICAS.md`](docs/ESTADISTICAS.md) | Métricas, privacidad y limitaciones |
-| [`docs/SEGURIDAD-AUDITORIA.md`](docs/SEGURIDAD-AUDITORIA.md) | Auditoría de seguridad y pendientes |
-| [`docs/SECRETOS.md`](docs/SECRETOS.md) | Gestión de secretos (gestor, archivos, sin `.env`), llaveros y rotación de claves |
-| [`docs/QA-INFORME.md`](docs/QA-INFORME.md) | Informe final de QA (incluye la revisión independiente) |
-
-## Pendientes antes de publicar
-
-Ver `docs/SEGURIDAD-AUDITORIA.md` y la lista de verificación de `docs/DESPLIEGUE.md` §10: SMTP y antimalware, DAST en
-preproducción, restauración probada, ensayo de migración con la copia real y carga del contenido oficial.
+- [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md): servidor, PostgreSQL, servicio de systemd, proxy inverso, monitoreo y
+  respaldos
+- [`docs/SECRETOS.md`](docs/SECRETOS.md): manejo y rotación de secretos
+- [`docs/migracion/`](docs/migracion/): migración de los datos de la versión anterior (SQLite)
