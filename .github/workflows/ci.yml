@@ -103,6 +103,11 @@ jobs:
         env:
           E2E_BROWSER: ${{ matrix.browser }}
           E2E_OUT: test-results/e2e
+      - name: Prueba de aceptación (usuarios, recuperación, páginas, banners y enlaces)
+        if: matrix.browser == 'chromium'
+        run: npm run test:acceptance
+        env:
+          E2E_OUT: test-results/e2e/aceptacion
       - uses: actions/upload-artifact@v4
         if: always()
         with:
