@@ -345,6 +345,7 @@ async function main(): Promise<void> {
   });
   await check('Enlaces: cada opción del menú del panel abre su sección (sin "No existe")', p, async () => {
     await go(p, '/admin');
+    await p.waitForSelector('#admin-menu a[href]'); // el menú lo dibuja el panel al cargar
     const links = await p.$$eval('#admin-menu a[href]', (as) => as.map((a) => ({ t: a.textContent?.trim() ?? '', href: a.getAttribute('href') ?? '' })));
     assert(links.length >= 8, `solo ${links.length} opciones`);
     const fallos: string[] = [];
