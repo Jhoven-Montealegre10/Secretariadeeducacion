@@ -19,7 +19,7 @@ export interface EdgeLimiterStats {
   rechazadas: number;
 }
 
-export function edgeLimiter(config: AppConfig, store: RateStore, crypto: CryptoService, stats: EdgeLimiterStats = { rechazadas: 0 }) {
+export function edgeLimiter(config: AppConfig, store: RateStore, crypto: CryptoService, stats?: EdgeLimiterStats) {
   const policy = { windowMs: config.rateLimit.windowMs, limit: config.rateLimit.burst, blockMs: config.rateLimit.blockMs };
   return (req: Request, res: Response, next: NextFunction): void => {
     if (req.path.startsWith('/health/')) return next();
@@ -28,7 +28,7 @@ export function edgeLimiter(config: AppConfig, store: RateStore, crypto: CryptoS
       .consume(key, policy)
       .then((d) => {
         if (d.allowed) return next();
-        stats.rechazadas++;
+        if (stats) stats.rechazadas++;
         const retry = Math.max(1, Math.ceil(d.resetMs / 1000));
         res.setHeader('Retry-After', String(retry));
         res.setHeader('Cache-Control', 'no-store');
