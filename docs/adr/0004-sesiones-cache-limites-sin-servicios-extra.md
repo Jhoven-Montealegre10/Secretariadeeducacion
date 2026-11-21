@@ -11,3 +11,12 @@
 - **Consecuencias:** + una sola dependencia de infraestructura. − Más escrituras en PostgreSQL por intento sensible
   (bajo volumen); los límites generales se multiplican por el número de instancias (documentado). Si el tráfico lo
   exige, Redis puede reemplazar estas piezas sin cambiar servicios (interfaces aisladas).
+
+## Actualización: Redis opcional para los límites de peticiones
+
+- **Contexto:** se pidió protección explícita contra ráfagas y bots (miles de peticiones por segundo).
+- **Decisión:** un **límite de borde** se aplica a toda petición antes de sesiones y base de datos, con bloqueo
+  temporal. Sus contadores (y los generales) usan **Redis** si se configura el secreto `REDIS_URL`; si no, memoria
+  por instancia. Los límites sensibles siguen en PostgreSQL. Redis es opcional: si falla, se limita en memoria.
+- **Consecuencias:** + límites compartidos entre instancias con una ida y vuelta por petición (script Lua atómico).
+  − Un servicio más que operar cuando hay varias instancias. Los ataques distribuidos se frenan en CDN/WAF y Nginx.

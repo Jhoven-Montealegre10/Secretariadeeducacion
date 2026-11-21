@@ -66,6 +66,11 @@ export interface AppConfig {
   stats: { retentionDays: number; geoHeader: string; flushIntervalMs: number; flushBatchSize: number };
   cache: { ttlSeconds: number; maxEntries: number };
   api: { corsOrigins: string[]; docsTryItOut: boolean };
+  /**
+   * Límite de borde: se aplica a TODA petición antes de sesiones, base de datos y plantillas. Quien lo supera
+   * queda bloqueado `blockMs`. Con REDIS_URL el conteo se comparte entre instancias; sin Redis, por instancia.
+   */
+  rateLimit: { windowMs: number; burst: number; blockMs: number; maxMemoryKeys: number; redisUrl: string };
 }
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
@@ -158,6 +163,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (isProd && !dbPassword && !dbHost.startsWith('/')) errors.push('Falta DB_PASSWORD como archivo de secreto.');
   const migrationPassword = dynamicSecret('DB_MIGRATION_PASSWORD') ?? dbPassword;
   const smtp = resolveSecret('SMTP_URL');
+  // La URL de Redis puede llevar contraseña: es un secreto (archivo). Fuera del propio servidor exige TLS (rediss://).
+  const redis = resolveSecret('REDIS_URL');
+  if (redis && isProd) {
+    try {
+      const u = new URL(redis.value);
+      const local = LOCAL_HOSTS.has(u.hostname.replace('[', '').replace(']', ''));
+      if (u.protocol !== 'rediss:' && !(u.protocol === 'redis:' && local)) errors.push('REDIS_URL en otro servidor exige TLS (rediss://).');
+    } catch {
+      errors.push('REDIS_URL no es una URL válida (redis://… o rediss://…).');
+    }
+  }
 
   const db: DatabaseConfig = {
     host: dbHost,
@@ -222,6 +238,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     api: {
       corsOrigins: list('CORS_ORIGINS'),
       docsTryItOut: env.API_DOCS_TRY_IT_OUT ? env.API_DOCS_TRY_IT_OUT === 'true' : !isProd,
+    },
+    rateLimit: {
+      windowMs: num('RATE_LIMIT_WINDOW_SECONDS', 10) * 1000,
+      // En pruebas automáticas no se limita salvo que la prueba lo pida (TEST_EDGE_LIMIT).
+      burst: isTest ? num('TEST_EDGE_LIMIT', 1_000_000) : num('RATE_LIMIT_BURST', 200),
+      blockMs: num('RATE_LIMIT_BLOCK_SECONDS', 300) * 1000,
+      maxMemoryKeys: num('RATE_LIMIT_MAX_KEYS', 100_000),
+      redisUrl: redis?.value ?? '',
     },
   };
 

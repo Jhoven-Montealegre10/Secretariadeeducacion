@@ -195,6 +195,7 @@ export const SystemMetrics = single(
       conexionesServidor: z.number().int().nullable(),
     }),
     cache: z.strictObject({ entradas: z.number().int(), aciertos: z.number().int(), fallos: z.number().int(), escuchandoInvalidaciones: z.boolean() }),
+    limites: z.strictObject({ almacen: z.enum(['memoria', 'redis']), redisConectado: z.boolean().nullable(), rechazadasBorde: z.number().int() }),
     estadisticas: z.strictObject({ pendientes: z.number().int(), descartadas: z.number().int() }),
     http: z.strictObject({ ventanaMinutos: z.number().int(), total: Latency, porRuta: z.array(Latency.extend({ ruta: z.string() })) }),
   }),

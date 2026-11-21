@@ -19,6 +19,7 @@ El panel y el sitio usan una **API REST** versionada y documentada con OpenAPI.
 | Lenguaje y entorno | TypeScript (modo estricto) sobre Node.js 24 LTS |
 | Framework | NestJS |
 | Base de datos | PostgreSQL 16, con TypeORM para la conexión y las migraciones |
+| Límites de peticiones | Redis 7 (opcional; necesario con varias instancias) |
 | Vistas del sitio | EJS (renderizado en el servidor) |
 | Panel | HTML, CSS y JavaScript sin frameworks, que consume la API |
 | Validación y contrato de la API | Zod y OpenAPI 3 (Swagger) |
@@ -44,8 +45,9 @@ test/                 Pruebas unitarias, de integración, de navegador (E2E) y d
 docs/                 Documentación técnica
 ```
 
-- PostgreSQL es la única base de datos. También guarda las sesiones y la caché, así que no se necesitan otros
-  servicios.
+- PostgreSQL es la única base de datos. También guarda las sesiones y la caché.
+- Cada petición pasa primero por un límite contra ráfagas y bots, antes de tocar sesiones o base de datos. Con
+  varias instancias, Redis comparte esos contadores entre ellas.
 - Los archivos subidos (imágenes, audio, PDF) se guardan en disco, fuera de la carpeta pública. La base de datos solo
   guarda su información descriptiva.
 - El esquema de la base de datos solo cambia mediante migraciones versionadas.
@@ -125,7 +127,9 @@ npm run test:coverage     # pruebas con informe de cobertura
 ### Requisitos del servidor
 
 - Linux con Node.js 24 LTS y PostgreSQL 16 (en el mismo servidor o en otro, con conexión TLS)
-- Proxy inverso con HTTPS (Nginx o Apache)
+- Proxy inverso con HTTPS (Nginx o Apache), con límites de peticiones por IP
+- Recomendado para un portal público: CDN/WAF delante del servidor, contra ataques distribuidos
+- Redis 7 si se usan varias instancias del portal
 - ClamAV, obligatorio para cargar archivos en producción
 - Servidor de correo SMTP con TLS
 - Un gestor de secretos: HashiCorp Vault, AWS/Azure/GCP Secret Manager, secretos de Docker/Kubernetes o

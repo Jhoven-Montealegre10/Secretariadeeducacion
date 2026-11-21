@@ -31,6 +31,7 @@ import {
   SliderRepository,
 } from './infrastructure/repositories/content.repositories';
 import { AuditRepository, CredentialRepository, RoleRepository, UserRepository } from './infrastructure/repositories/identity.repositories';
+import { RateStoreService } from './infrastructure/rate-limit/rate-store.service';
 import { SecurityModule } from './infrastructure/security/security.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { ApiInterceptor } from './presentation/http/api/api.interceptor';
@@ -125,6 +126,7 @@ export class CitizenModule {}
   ],
   providers: [
     CsrfService,
+    RateStoreService,
     RateLimiter,
     MetricsService,
     OpenApiDocs,
@@ -133,7 +135,7 @@ export class CitizenModule {}
     { provide: APP_INTERCEPTOR, useClass: ApiInterceptor },
     { provide: APP_FILTER, useClass: ErrorFilter },
   ],
-  exports: [CsrfService, MetricsService, OpenApiDocs],
+  exports: [CsrfService, MetricsService, OpenApiDocs, RateStoreService],
 })
 export class HttpModule {}
 

@@ -1,14 +1,17 @@
 /**
  * Límites de peticiones por IP (ventana fija). Frenan fuerza bruta, spam y abuso.
- *  - Límites generales (todas las rutas, API): en memoria por instancia (alto volumen).
+ *  - Antes de todo actúa el límite de borde contra ráfagas (edge-limiter.ts).
+ *  - Límites generales (todas las rutas, API): en Redis si está configurado (compartidos), si no en memoria.
  *  - Límites sensibles (login, MFA, recuperación, cargas, PQRSD): en PostgreSQL, compartidos
  *    entre instancias, con la IP reducida a un HMAC (no se guarda la IP).
  * El bloqueo por cuenta (5 intentos → 15 min) es independiente y también vive en la BD.
  */
-import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { TooManyRequestsError } from '../../../domain/errors';
 import { APP_CONFIG, type AppConfig } from '../../../config/configuration';
 import { Db } from '../../../infrastructure/database/db.service';
+import { clientId } from '../../../infrastructure/rate-limit/rate-store';
+import { RateStoreService } from '../../../infrastructure/rate-limit/rate-store.service';
 import { CryptoService } from '../../../infrastructure/security/crypto.service';
 import type { RateBucket } from '../route-spec';
 
@@ -38,24 +41,16 @@ export interface RateResult {
 }
 
 @Injectable()
-export class RateLimiter implements OnModuleDestroy {
+export class RateLimiter {
   private readonly logger = new Logger('RateLimiter');
-  private readonly memory = new Map<string, { count: number; reset: number }>();
-  private readonly sweeper: NodeJS.Timeout;
   private hitsSincePurge = 0;
 
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly db: Db,
     private readonly crypto: CryptoService,
-  ) {
-    this.sweeper = setInterval(() => this.sweep(), MIN);
-    this.sweeper.unref();
-  }
-
-  onModuleDestroy(): void {
-    clearInterval(this.sweeper);
-  }
+    private readonly store: RateStoreService,
+  ) {}
 
   private limitFor(bucket: keyof typeof LIMITS): number {
     // En pruebas se puede bajar el límite para verificar el bloqueo (TEST_RATE_LIMIT).
@@ -64,16 +59,11 @@ export class RateLimiter implements OnModuleDestroy {
     return Number(env ?? 10_000);
   }
 
-  private sweep(): void {
-    const now = Date.now();
-    for (const [key, v] of this.memory) if (v.reset <= now) this.memory.delete(key);
-  }
-
   /** Registra un intento; lanza 429 si se supera el límite. */
   async hit(bucket: keyof typeof LIMITS, ip: string): Promise<RateResult> {
     const def = LIMITS[bucket];
     const limit = this.limitFor(bucket);
-    const key = `${bucket}:${this.crypto.statsHash('rate-limit', ip || 'desconocida').slice(0, 24)}`;
+    const key = `${bucket}:${this.crypto.statsHash('rate-limit', clientId(ip)).slice(0, 24)}`;
     let count: number;
     let reset: number;
     if (def.shared) {
@@ -95,25 +85,18 @@ export class RateLimiter implements OnModuleDestroy {
       } catch (err) {
         // Si la BD no responde, se aplica el límite en memoria (falla cerrada para no quedar sin protección).
         this.logger.warn(`Límite compartido no disponible (${(err as Error).message}); se usa el de memoria.`);
-        ({ count, reset } = this.memoryHit(key, def.windowMs));
+        ({ count, reset } = await this.storeHit(key, def.windowMs, limit));
       }
     } else {
-      ({ count, reset } = this.memoryHit(key, def.windowMs));
+      ({ count, reset } = await this.storeHit(key, def.windowMs, limit));
     }
     const result = { limit, remaining: Math.max(0, limit - count), resetSeconds: Math.max(0, Math.ceil((reset - Date.now()) / 1000)) };
     if (count > limit) throw Object.assign(new TooManyRequestsError(def.message), { rate: result });
     return result;
   }
 
-  private memoryHit(key: string, windowMs: number): { count: number; reset: number } {
-    const now = Date.now();
-    const entry = this.memory.get(key);
-    if (!entry || entry.reset <= now) {
-      const fresh = { count: 1, reset: now + windowMs };
-      this.memory.set(key, fresh);
-      return fresh;
-    }
-    entry.count++;
-    return entry;
+  private async storeHit(key: string, windowMs: number, limit: number): Promise<{ count: number; reset: number }> {
+    const d = await this.store.consume(key, { windowMs, limit, blockMs: 0 });
+    return { count: d.count, reset: Date.now() + d.resetMs };
   }
 }

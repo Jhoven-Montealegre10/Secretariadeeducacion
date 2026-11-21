@@ -33,6 +33,7 @@
 | `DB_PASSWORD` | Contraseña de `semibague_app` | `npm run secrets -- rotar-bd`. **Dinámica:** se relee en cada conexión nueva, sin reiniciar |
 | `DB_MIGRATION_PASSWORD` | Contraseña de `semibague_migrator` (solo en el paso de despliegue) | `npm run secrets -- rotar-bd --migraciones` |
 | `SMTP_URL` | `smtps://usuario:clave@servidor:465` (o `smtp://…:587` con STARTTLS; TLS obligatorio) | En el proveedor de correo y en el gestor |
+| `REDIS_URL` | `rediss://usuario:clave@redis.interna:6380` (opcional; límites compartidos entre instancias) | En Redis (`ACL SETUSER`) y en el gestor |
 | `DB_ADMIN_URL` | Conexión de un administrador de PostgreSQL. **Solo** para `rotar-bd`; nunca en el servicio | En el gestor |
 
 Formatos anteriores aceptados: `DATA_ENCRYPTION_KEY` (una sola clave en base64, se trata como `k0`) y

@@ -34,6 +34,11 @@ async function bootstrap(): Promise<void> {
   await migrationsGate(config, logger);
   const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(config), { bodyParser: false, logger: ['error', 'warn', 'log'] });
   await configureApp(app);
+  // Tiempos máximos contra ataques lentos (slowloris): cabeceras en 15 s, solicitud completa (con cargas) en 120 s.
+  const server = app.getHttpServer();
+  server.headersTimeout = 15_000;
+  server.requestTimeout = 120_000;
+  server.keepAliveTimeout = 5_000;
   await app.listen(config.port, config.host);
   logger.log(`Portal SEM Ibagué en ${config.appUrl} (${config.env}, instancia ${config.instanceId})`);
 }

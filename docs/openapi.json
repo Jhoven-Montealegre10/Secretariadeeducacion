@@ -7970,6 +7970,31 @@
                 ],
                 "additionalProperties": false
               },
+              "limites": {
+                "type": "object",
+                "properties": {
+                  "almacen": {
+                    "type": "string",
+                    "enum": [
+                      "memoria",
+                      "redis"
+                    ]
+                  },
+                  "redisConectado": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
+                  "rechazadasBorde": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "almacen",
+                  "redisConectado",
+                  "rechazadasBorde"
+                ],
+                "additionalProperties": false
+              },
               "estadisticas": {
                 "type": "object",
                 "properties": {
@@ -8083,6 +8108,7 @@
               "eventLoopRetrasoP99Ms",
               "baseDeDatos",
               "cache",
+              "limites",
               "estadisticas",
               "http"
             ],

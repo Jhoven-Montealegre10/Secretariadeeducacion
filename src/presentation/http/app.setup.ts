@@ -1,6 +1,6 @@
 /**
  * Ensamble HTTP (capa de presentación), compartido por el servidor y las pruebas:
- *   ID de solicitud → métricas → cabeceras de seguridad → estáticos → cuerpos → sesión →
+ *   ID de solicitud → métricas → límite de borde (ráfagas/bots) → cabeceras de seguridad → estáticos → cuerpos → sesión →
  *   actor (revalidado contra la BD) → datos de vista → analítica → CORS de la API pública →
  *   rutas Nest (guard → interceptor → controlador) → filtro de errores.
  */
@@ -16,6 +16,7 @@ import { StatsService } from '../../application/stats.service';
 import { APP_CONFIG, type AppConfig } from '../../config/configuration';
 import { SITE } from '../../config/site';
 import { Db } from '../../infrastructure/database/db.service';
+import { RateStoreService } from '../../infrastructure/rate-limit/rate-store.service';
 import { CryptoService } from '../../infrastructure/security/crypto.service';
 import { PgSessionStore } from '../../infrastructure/session/pg-session.store';
 import { viewHelpers } from '../web/view-helpers';
@@ -24,6 +25,7 @@ import { buildOpenApiDocument } from './api/openapi-document';
 import type { AppRequest } from './http.types';
 import { MetricsService } from './observability/metrics.service';
 import { CsrfService } from './security/csrf.service';
+import { edgeLimiter } from './security/edge-limiter';
 import { securityHeaders } from './security/headers';
 import { sessionCookieName } from './session/session.helpers';
 
@@ -47,6 +49,8 @@ export async function configureApp(app: NestExpressApplication): Promise<PgSessi
     next();
   });
   app.use(metrics.middleware());
+  // Primer filtro: ráfagas y bots reciben 429 antes de estáticos, cuerpos, sesiones y base de datos.
+  app.use(edgeLimiter(config, app.get(RateStoreService), app.get(CryptoService), metrics.edge));
   app.use(securityHeaders(config.isProd));
   app.use(express.static(path.join(config.root, 'public'), { index: false, dotfiles: 'deny', maxAge: config.isProd ? '7d' : 0 }));
   app.use('/api/docs/assets', express.static(swaggerUiDist.getAbsoluteFSPath(), { index: false, maxAge: config.isProd ? '7d' : 0 }));

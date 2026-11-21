@@ -13,6 +13,7 @@ import { StatsService } from '../../../application/stats.service';
 import { APP_CONFIG, type AppConfig } from '../../../config/configuration';
 import { PublicCache } from '../../../infrastructure/cache/public-cache.service';
 import { Db } from '../../../infrastructure/database/db.service';
+import { RateStoreService } from '../../../infrastructure/rate-limit/rate-store.service';
 import type { AppRequest } from '../http.types';
 
 const WINDOW_MS = 5 * 60 * 1000;
@@ -49,12 +50,15 @@ export class MetricsService implements OnModuleDestroy {
   private samples: Sample[] = [];
   private readonly loop = monitorEventLoopDelay({ resolution: 20 });
   private readonly startedAt = new Date();
+  /** Peticiones rechazadas por el límite de borde (las cuenta edge-limiter). */
+  readonly edge = { rechazadas: 0 };
 
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly db: Db,
     private readonly cache: PublicCache,
     private readonly stats: StatsService,
+    private readonly limits: RateStoreService,
   ) {
     this.loop.enable();
   }
@@ -119,6 +123,7 @@ export class MetricsService implements OnModuleDestroy {
         conexionesServidor: serverConnections,
       },
       cache: { entradas: cache.entries, aciertos: cache.hits, fallos: cache.misses, escuchandoInvalidaciones: cache.listening },
+      limites: { almacen: this.limits.kind, redisConectado: this.limits.redisConnected, rechazadasBorde: this.edge.rechazadas },
       estadisticas: { pendientes: this.stats.pending(), descartadas: this.stats.dropped },
       http: {
         ventanaMinutos: WINDOW_MS / 60000,

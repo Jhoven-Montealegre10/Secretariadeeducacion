@@ -115,9 +115,28 @@ WantedBy=multi-user.target
 Varias instancias: sesiones, límites sensibles, auditoría y caché ya funcionan en múltiples instancias (PostgreSQL y
 `LISTEN/NOTIFY`). Comparta `/var/lib/semibague` (NFS o almacenamiento de objetos montado) y defina `INSTANCE_ID` distinto.
 
-## 7. Proxy inverso (Nginx)
+## 7. Proxy inverso (Nginx) y protección contra abuso
+
+La protección contra ráfagas, bots y denegación de servicio tiene tres capas. Cada una frena lo que la anterior no
+puede:
+
+| Capa | Qué frena | Dónde |
+|---|---|---|
+| CDN / WAF (Cloudflare, AWS CloudFront + WAF, Azure Front Door, Akamai) | Ataques **distribuidos** desde miles de IP (DDoS de red y de aplicación), bots conocidos | Delante del servidor; recomendada para un portal público |
+| Nginx (`limit_req`, `limit_conn`, tiempos máximos) | Ráfagas de una IP y conexiones lentas, antes de llegar a Node.js | Este servidor |
+| Aplicación (límite de borde + límites por operación) | Lo que pase las capas anteriores; cuentas, formularios y cargas | `src/presentation/http/security/` |
+
+Ninguna aplicación puede, por sí sola, resistir un ataque distribuido grande: ese tráfico debe frenarse antes de
+llegar al servidor (CDN/WAF y el proveedor de red).
 
 ```nginx
+# En el bloque http { … }
+limit_req_zone  $binary_remote_addr zone=sem_general:20m rate=20r/s;   # por IP
+limit_req_zone  $binary_remote_addr zone=sem_login:10m   rate=10r/m;
+limit_conn_zone $binary_remote_addr zone=sem_conn:10m;
+limit_req_status  429;
+limit_conn_status 429;
+
 server {
   listen 443 ssl http2;
   server_name portal.example.gov.co;
@@ -125,19 +144,72 @@ server {
   ssl_certificate_key /etc/ssl/semibague/privkey.pem;
   ssl_protocols TLSv1.2 TLSv1.3;
   client_max_body_size 25m;
-  proxy_read_timeout 30s;
+
+  # Conexiones lentas (slowloris) y conexiones simultáneas por IP
+  client_header_timeout 10s;
+  client_body_timeout   30s;
+  send_timeout          30s;
+  keepalive_timeout     15s;
+  limit_conn sem_conn 30;
+
   location / {
+    limit_req zone=sem_general burst=60 nodelay;
+    proxy_pass http://127.0.0.1:3000;
+    proxy_read_timeout 30s;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+  }
+  location = /api/v1/auth/login {
+    limit_req zone=sem_login burst=5 nodelay;
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;
+  }
+  location /assets/ {
+    limit_req zone=sem_general burst=100 nodelay;
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
   location /health/ { allow 10.0.0.0/8; deny all; proxy_pass http://127.0.0.1:3000; }
 }
 server { listen 80; server_name portal.example.gov.co; return 301 https://$host$request_uri; }
 ```
 
-`TRUST_PROXY=1` (número exacto de proxies). La aplicación escucha en `127.0.0.1` en producción.
+- `TRUST_PROXY=1` (número exacto de proxies; con una CDN delante, súmela). Si el valor es incorrecto, la aplicación
+  vería la IP del proxy y todos los visitantes compartirían el mismo límite.
+- Con CDN, configure Nginx para tomar la IP real solo de los rangos de la CDN (`set_real_ip_from` + `real_ip_header`).
+- La aplicación escucha en `127.0.0.1` en producción: nadie puede saltarse Nginx.
+
+### Límites de la aplicación
+
+| Límite | Valor por defecto | Variable |
+|---|---|---|
+| Límite de borde, por IP (IPv6 por /64), sobre **toda** petición, antes de sesiones y base de datos | 200 peticiones cada 10 s | `RATE_LIMIT_BURST`, `RATE_LIMIT_WINDOW_SECONDS` |
+| Bloqueo al superarlo | 5 minutos | `RATE_LIMIT_BLOCK_SECONDS` |
+| General / API | 900 / 600 cada 15 min | (código) |
+| Inicio de sesión y MFA | 10 cada 15 min | (código) |
+| Recuperación de acceso | 5 por hora | (código) |
+| PQRSD | 5 por hora | (código) |
+| Cargas de archivos | 60 por hora | (código) |
+
+Una página con todos sus recursos usa unas 40 peticiones. Las respuestas 429 incluyen `Retry-After`. Las rechazadas
+por el límite de borde se ven en las métricas (`limites.rechazadasBorde`).
+
+### Redis (recomendado con varias instancias)
+
+Sin Redis, los límites de borde y generales se cuentan **por instancia** (con 3 instancias, un atacante obtiene el
+triple). Con Redis se comparten entre todas. Si Redis deja de responder, el portal sigue funcionando y limita en
+memoria hasta que se reconecta.
+
+1. Instale Redis 7 en un servidor interno, sin acceso desde internet (`bind` a la red interna, `protected-mode yes`).
+2. Cree un usuario con permisos mínimos y contraseña aleatoria (no use el usuario `default`):
+   `ACL SETUSER semibague on >CONTRASEÑA_ALEATORIA ~sem:rl:* +eval +pttl +incr +pexpire +set +ping +hello +auth`
+3. Guarde la conexión como **secreto** `REDIS_URL` (archivo, nunca en `.env`): `rediss://semibague:…@redis.interna:6380`.
+   En otro servidor se exige TLS (`rediss://`); `redis://` solo se acepta en el mismo servidor.
+4. Redis guarda solo contadores que vencen solos y cuyas claves son un HMAC de la IP: no hace falta respaldarlo
+   (`save ""`, `appendonly no`) y `maxmemory-policy volatile-ttl` evita que crezca sin límite.
 
 ## 8. Salud, registros y monitoreo
 
