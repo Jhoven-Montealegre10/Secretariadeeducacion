@@ -152,6 +152,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   while (appUrl.endsWith('/')) appUrl = appUrl.slice(0, -1); // sin expresión regular: tiempo lineal
   if (isProd && !appUrl.startsWith('https://')) errors.push('APP_URL debe usar https:// en producción.');
 
+  // En producción el portal escucha solo en localhost, detrás del proxy inverso. Sin TRUST_PROXY todas las peticiones
+  // parecerían venir de 127.0.0.1: compartirían un solo límite y una ráfaga bloquearía a todos los visitantes.
+  const host = env.HOST || (isProd ? '127.0.0.1' : '0.0.0.0');
+  const trustProxy = num('TRUST_PROXY', 0);
+  if (isProd && LOCAL_HOSTS.has(host) && !(trustProxy >= 1)) {
+    errors.push('Detrás del proxy inverso defina TRUST_PROXY con el número de proxies (normalmente 1; súmele 1 si hay CDN).');
+  }
+
   const storageDir = env.STORAGE_DIR || path.join(root, 'storage');
   const dbHost = env.DB_HOST || 'localhost';
   const ssl = (env.DB_SSL || 'disable') as SslMode;
@@ -199,10 +207,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     isProd,
     isTest,
     root,
-    host: env.HOST || (isProd ? '127.0.0.1' : '0.0.0.0'),
+    host,
     port,
     appUrl,
-    trustProxy: num('TRUST_PROXY', 0),
+    trustProxy,
     autoMigrate: env.AUTO_MIGRATE ? env.AUTO_MIGRATE === 'true' : !isProd && !isTest,
     instanceId: env.INSTANCE_ID || crypto.randomBytes(4).toString('hex'),
     db,

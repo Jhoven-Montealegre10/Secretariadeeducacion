@@ -229,7 +229,7 @@ describe('Duración de la sesión y configuración de producción', () => {
       DATA_ENCRYPTION_KEYS: `k202611160000:${Buffer.alloc(32, 7).toString('base64')}`,
       DB_PASSWORD: 'ficticia',
     };
-    const https = { APP_URL: 'https://portal.example.gov.co' };
+    const https = { APP_URL: 'https://portal.example.gov.co', TRUST_PROXY: '1' };
     try {
       const files = { SECRETS_DIR: dir };
       assert.match(run({ ...https, ...files }).stderr, /SESSION_SECRET|DATA_ENCRYPTION_KEY/);
@@ -238,7 +238,9 @@ describe('Duración de la sesión y configuración de producción', () => {
       write('DATA_ENCRYPTION_KEYS', values.DATA_ENCRYPTION_KEYS);
       assert.match(run({ ...https, ...files }).stderr, /DB_PASSWORD/);
       write('DB_PASSWORD', values.DB_PASSWORD);
-      assert.match(run({ ...files, APP_URL: 'http://portal.example.gov.co' }).stderr, /https/);
+      assert.match(run({ ...files, APP_URL: 'http://portal.example.gov.co', TRUST_PROXY: '1' }).stderr, /https/);
+      // Detrás del proxy sin TRUST_PROXY todos los visitantes compartirían la IP 127.0.0.1 (y un solo límite).
+      assert.match(run({ ...files, APP_URL: 'https://portal.example.gov.co' }).stderr, /TRUST_PROXY/);
       assert.match(run({ ...files, ...https, DB_HOST: 'db.example.gov.co', DB_SSL: 'require' }).stderr, /verify-full/);
       assert.equal(run({ ...files, ...https }).status, 0, 'arranca con los secretos en archivos');
 

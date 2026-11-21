@@ -135,7 +135,7 @@ describe('Configuración de Redis en producción', () => {
   write('DB_PASSWORD', 'x'.repeat(24));
   const prod = (redisUrl: string) => {
     write('REDIS_URL', redisUrl);
-    return () => loadConfig({ NODE_ENV: 'production', APP_URL: 'https://portal.example.gov.co', DB_HOST: '127.0.0.1', SECRETS_DIR: dir });
+    return () => loadConfig({ NODE_ENV: 'production', APP_URL: 'https://portal.example.gov.co', TRUST_PROXY: '1', DB_HOST: '127.0.0.1', SECRETS_DIR: dir });
   };
 
   test('Redis en otro servidor exige TLS (rediss://); en el mismo servidor se acepta redis://', () => {
@@ -149,7 +149,14 @@ describe('Configuración de Redis en producción', () => {
     fs.rmSync(path.join(dir, 'REDIS_URL'), { force: true });
     assert.throws(
       () =>
-        loadConfig({ NODE_ENV: 'production', APP_URL: 'https://portal.example.gov.co', DB_HOST: '127.0.0.1', SECRETS_DIR: dir, REDIS_URL: 'rediss://x:y@h:1' }),
+        loadConfig({
+          NODE_ENV: 'production',
+          APP_URL: 'https://portal.example.gov.co',
+          TRUST_PROXY: '1',
+          DB_HOST: '127.0.0.1',
+          SECRETS_DIR: dir,
+          REDIS_URL: 'rediss://x:y@h:1',
+        }),
       /REDIS_URL/,
     );
   });
